@@ -18,6 +18,7 @@ struct ContentView: View {
     @StateObject private var progressStore = PicodProgressStore()
     @State private var runtimeWorldContext: WorldGenerationContext = DevTestMode.worldGenerationContext
     @State private var runtimeDevMap: TestMap = TestMapFactory.devMap(context: DevTestMode.worldGenerationContext)
+    @State private var activeStoryBeatIds: [String] = []
 
     @State private var dayCount: Int = 1
     @State private var logEntries: [PetLogEntry] = []
@@ -580,7 +581,33 @@ struct ContentView: View {
         if dayCount != progress.absoluteDayIndex {
             dayCount = progress.absoluteDayIndex
         }
+        refreshStorySchedule(for: progress, now: now)
         return progress
+    }
+
+    private func refreshStorySchedule(for progress: PicodProgressRecord, now: Date) {
+        guard hasEverCaptured || progress.participationState == .captured else {
+            activeStoryBeatIds = progress.firedStoryBeatIds
+            return
+        }
+
+        let worldInput = worldInputService.worldInput
+        let context = StoryTriggerContext(
+            progress: progress,
+            weatherCondition: worldInput.volatile.weather.condition,
+            timePhase: worldInput.volatile.timePhase,
+            localHour: resolvedLocalHour(for: now),
+            recentParticipationStates: progressStore.recentParticipationStates(limit: 7),
+            alreadyFiredBeatIds: Set(progress.firedStoryBeatIds)
+        )
+        let result = PicodStoryScheduler().evaluate(context: context)
+        if !result.scheduledBeatIds.isEmpty {
+            progressStore.markStoryBeatsFired(
+                calendarDayKey: progress.calendarDayKey,
+                beatIds: result.scheduledBeatIds
+            )
+        }
+        activeStoryBeatIds = (progress.firedStoryBeatIds + result.scheduledBeatIds).sorted()
     }
 
     private func cameraStatusLine() -> String {
@@ -1181,6 +1208,7 @@ struct ContentView: View {
                     dailyPhotoResetToken = resetTokenFor4AM(now: Date())
                     lastCaptureResetToken = dailyPhotoResetToken
                     hasEverCaptured = true
+                    refreshStorySchedule(for: progressStore.currentRecord ?? progress, now: Date())
                     withAnimation(.easeInOut(duration: 0.20)) {
                         appStateRaw = AppState.picoAlive.rawValue
                     }
@@ -1215,6 +1243,7 @@ struct ContentView: View {
                     dailyPhotoResetToken = resetTokenFor4AM(now: Date())
                     lastCaptureResetToken = dailyPhotoResetToken
                     hasEverCaptured = true
+                    refreshStorySchedule(for: progressStore.currentRecord ?? progress, now: Date())
                     withAnimation(.easeInOut(duration: 0.20)) {
                         appStateRaw = AppState.picoAlive.rawValue
                     }
