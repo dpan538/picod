@@ -14,6 +14,10 @@ Primary goal: keep shrine/pagoda/residential assets in one visual language while
 - Anchor: bottom-center (`anchor = (0.5, 1.0)`) unless a specific prop requires otherwise
 - Shadow direction: down + slight right bias
 - Silhouette priority: roofline first, body second, details third
+- View angle: slight top-down with frontal readability bias
+- Roof plane should read first at map zoom, but front face must keep enough height to identify building class
+- Symmetry default: all buildings should be near-axis-symmetric on the vertical centerline
+- Allowed asymmetry is minor and functional (entrance wear, side clutter), not silhouette-breaking
 
 ## 3) Proportion Rules
 - Standard vertical split (for most buildings):
@@ -45,6 +49,11 @@ Hard constraints:
 - Contact shadow at base: required for all buildings >= 2x2 tiles
 - Detail density: avoid checker-noise; group details into clusters
 
+## 5.1 Roof Shape Families
+- Ceremonial roof: steeper profile, cleaner ridge, stronger axial symmetry
+- Residential roof: broader silhouette, calmer slope, softer edge transitions
+- Utility roof: simplified cap or flat functional read, minimum decorative complexity
+
 ## 6) Type Differentiation (Same Language, Different Role)
 ### 6.1 Ceremonial Set (`pagoda`, `shrineSmall`, `torii`)
 - Geometry: more vertical and axial
@@ -62,6 +71,11 @@ Hard constraints:
 - Geometry: simplified silhouettes
 - Detail budget: 50% to 70% of residential complexity
 - Contrast: one level lower than ceremonial anchors
+
+## 6.4 Ornament Budget by Role
+- Ceremonial: ornament concentrated at ridge, threshold, and framing edges
+- Residential: ornament concentrated at porch, openings, and lower facade
+- Utility: near-zero central ornament, detail reserved for structural readability
 
 ## 7) Footprint Standards
 - 1x1: tiny utility only (wall segments, tiny markers)
@@ -101,6 +115,12 @@ A building sprite is accepted only if all are true:
 - Passes silhouette check in grayscale
 - Matches section 6 differentiation intent
 - No single side has accidental visual weight spikes
+- Passes near-axis symmetry check (left/right mass and roof rhythm stay balanced)
+
+## 10.1 Anti-Toy Rule
+- Avoid oversized roof caps with underdeveloped body mass
+- Avoid centered micro-details that read as sticker-like decals
+- Avoid equal contrast intensity on roof, body, and ornament at the same time
 
 ## 11) Immediate Refactor Order
 Apply this order to reduce risk while improving perceived quality quickly:
@@ -115,6 +135,15 @@ After these 3 are aligned, update `japaneseHouse` and `japaneseSmallHouse` to ma
 - Prefer editing `PA` pixel arrays first; only change palette if readability demands it
 - When changing palette, keep existing semantic slot ordering (roof/body/accent/shadow families)
 - Re-render `ContentView` preview after each major sprite revision
+- Grounding behavior must follow `PICOD_DEPTH_CUE_POLICY.md`
+- Ceremonial silhouette details must follow `PICOD_SHRINE_TORII_SHAPE_RULES.md`
+
+## 13) Mansion-Specific Correction Notes
+- `mansion` should read as the most front-facing and most stable residential anchor.
+- Near-axis symmetry is mandatory on the main facade silhouette, roof rhythm, and entry axis.
+- Do not use elevated plinth blocks that visually separate body from ground plane.
+- Ground contact should be expressed by a thin base cue, bottom-row stone rhythm, or contact shadow.
+- If a base treatment risks floating perception, remove it and favor lighter contact cues.
 
 ---
 This is the rule baseline. Next step is to produce concrete sprite revisions against this sheet, starting with `mansion`, `shrineSmall`, and `pagoda`.

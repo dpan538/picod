@@ -6,6 +6,7 @@ Purpose: define minimal, consistent grounding cues for map readability without t
 ## Core Principle
 Picod map rendering remains top-down symbolic.
 Depth cues are allowed only to improve grounding and readability, not to represent full physical height.
+Absence of shadow is the default state; shadow must be justified by grounding benefit, not added by habit.
 
 ## What Picod Is (and Is Not)
 - Is: symbolic top-down miniature scene with mild frontal readability on buildings.
@@ -20,12 +21,14 @@ Depth cues are allowed only to improve grounding and readability, not to represe
 - Elevated plinth blocks that visually separate building body from ground plane.
 - Long directional cast shadows that imply full 3D height hierarchy.
 - Mixed shadow systems per asset (different directions/length models).
+- Grounding treatment that introduces a readable side-wall or lifted platform illusion.
 
 ## Global Shadow Rules
 - Direction: fixed globally (down with slight right bias).
 - Length: short only (1 px, occasionally 2 px equivalent at sprite scale).
 - Contrast: low to medium-low; must not compete with roof/body contrast.
 - Function: grounding only, not height storytelling.
+- Grounding cues must remain readable across major terrain families and must not create false second outlines on dirt or moss ground.
 
 ## Role-Based Application
 - Major buildings (`mansion`, `shrineSmall`, `pagoda`, `japaneseHouse`, `japaneseSmallHouse`):

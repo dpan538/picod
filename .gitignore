@@ -1,0 +1,12 @@
+.DS_Store
+**/.DS_Store
+
+# Xcode user-local state
+xcuserdata/
+*.xcuserstate
+
+# Local build products
+DerivedData/
+build/
+*.ipa
+*.xcarchive

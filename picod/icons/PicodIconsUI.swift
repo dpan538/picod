@@ -2,121 +2,31 @@ import SwiftUI
 import CoreGraphics
 import Darwin
 
-// Lucide-inspired: thermometer
+// SF Symbol: thermometer.medium
 struct TempIcon: View {
     var body: some View {
-        PicodIconCanvas { ctx in
-            let color = GraphicsContext.Shading.color(.picod_ink)
-
-            var tube = Path()
-            tube.move(to: PicodIconGrid.point(15.5, 7))
-            tube.addLine(to: PicodIconGrid.point(15.5, 22.3))
-            tube.move(to: PicodIconGrid.point(20.5, 7))
-            tube.addLine(to: PicodIconGrid.point(20.5, 22.3))
-            tube.addArc(
-                center: PicodIconGrid.point(18, 22.3),
-                radius: 2.5,
-                startAngle: .degrees(0),
-                endAngle: .degrees(180),
-                clockwise: true
-            )
-            ctx.stroke(tube, with: color, style: PicodIconGrid.style)
-
-            var mercury = Path()
-            mercury.move(to: PicodIconGrid.point(18, 11.2))
-            mercury.addLine(to: PicodIconGrid.point(18, 25.2))
-            ctx.stroke(mercury, with: color, style: PicodIconGrid.lightStyle)
-
-            var bulb = Path()
-            bulb.addEllipse(in: PicodIconGrid.rect(12.8, 21.6, 10.4, 10.4))
-            ctx.stroke(bulb, with: color, style: PicodIconGrid.style)
-        }
+        PicodSymbolIcon(systemName: "thermometer.medium")
     }
 }
 
-// Lucide-inspired: droplet
+// SF Symbol: humidity
 struct HumidIcon: View {
     var body: some View {
-        PicodIconCanvas { ctx in
-            let color = GraphicsContext.Shading.color(.picod_ink)
-            var path = Path()
-            path.move(to: PicodIconGrid.point(18, 5.3))
-            path.addCurve(
-                to: PicodIconGrid.point(27.6, 17.8),
-                control1: PicodIconGrid.point(24.1, 11.6),
-                control2: PicodIconGrid.point(27.6, 14.6)
-            )
-            path.addCurve(
-                to: PicodIconGrid.point(18, 30.7),
-                control1: PicodIconGrid.point(27.6, 25.1),
-                control2: PicodIconGrid.point(23.3, 30.7)
-            )
-            path.addCurve(
-                to: PicodIconGrid.point(8.4, 17.8),
-                control1: PicodIconGrid.point(12.7, 30.7),
-                control2: PicodIconGrid.point(8.4, 25.1)
-            )
-            path.addCurve(
-                to: PicodIconGrid.point(18, 5.3),
-                control1: PicodIconGrid.point(8.4, 14.6),
-                control2: PicodIconGrid.point(11.9, 11.6)
-            )
-            ctx.stroke(path, with: color, style: PicodIconGrid.style)
-        }
+        PicodSymbolIcon(systemName: "humidity")
     }
 }
 
-// Lucide-inspired: calendar-days
+// SF Symbol: calendar
 struct CalendarDayIcon: View {
     var body: some View {
-        PicodIconCanvas { ctx in
-            let color = GraphicsContext.Shading.color(.picod_ink)
-            ctx.stroke(PicodIconGrid.roundedRect(7, 7, 22, 22, corner: 4), with: color, style: PicodIconGrid.style)
-
-            var top = Path()
-            top.move(to: PicodIconGrid.point(7, 13.4))
-            top.addLine(to: PicodIconGrid.point(29, 13.4))
-            ctx.stroke(top, with: color, style: PicodIconGrid.style)
-
-            for x in [12.0, 24.0] {
-                var peg = Path()
-                peg.move(to: PicodIconGrid.point(CGFloat(x), 5.0))
-                peg.addLine(to: PicodIconGrid.point(CGFloat(x), 9.0))
-                ctx.stroke(peg, with: color, style: PicodIconGrid.style)
-            }
-
-            let points: [CGPoint] = [
-                .init(x: 12, y: 18), .init(x: 18, y: 18), .init(x: 24, y: 18),
-                .init(x: 12, y: 23.8), .init(x: 18, y: 23.8), .init(x: 24, y: 23.8)
-            ]
-
-            for point in points {
-                var dot = Path()
-                dot.addEllipse(in: CGRect(x: point.x - 1.1, y: point.y - 1.1, width: 2.2, height: 2.2))
-                ctx.fill(dot, with: color)
-            }
-        }
+        PicodSymbolIcon(systemName: "calendar")
     }
 }
 
-// Lucide-inspired: shopping-bag
+// SF Symbol: bag
 struct BagIcon: View {
     var body: some View {
-        PicodIconCanvas { ctx in
-            let color = GraphicsContext.Shading.color(.picod_ink)
-            ctx.stroke(PicodIconGrid.roundedRect(9, 11, 18, 19, corner: 3.6), with: color, style: PicodIconGrid.style)
-
-            var handle = Path()
-            handle.move(to: PicodIconGrid.point(13, 11))
-            handle.addArc(
-                center: PicodIconGrid.point(18, 11),
-                radius: 5,
-                startAngle: .degrees(180),
-                endAngle: .degrees(0),
-                clockwise: false
-            )
-            ctx.stroke(handle, with: color, style: PicodIconGrid.style)
-        }
+        PicodSymbolIcon(systemName: "bag")
     }
 }
 
@@ -159,27 +69,10 @@ struct CloseIcon: View {
     }
 }
 
-// Lucide-inspired: settings
+// SF Symbol: gearshape
 struct SettingsIcon: View {
     var body: some View {
-        PicodIconCanvas { ctx in
-            let color = GraphicsContext.Shading.color(.picod_ink)
-            let center = CGPoint(x: 18, y: 18)
-
-            var inner = Path()
-            inner.addEllipse(in: PicodIconGrid.rect(13.5, 13.5, 9, 9))
-            ctx.stroke(inner, with: color, style: PicodIconGrid.style)
-
-            for i in 0..<8 {
-                let angle = (CGFloat(i) / 8) * .pi * 2
-                let start = CGPoint(x: center.x + cos(angle) * 6.4, y: center.y + sin(angle) * 6.4)
-                let end = CGPoint(x: center.x + cos(angle) * 10.2, y: center.y + sin(angle) * 10.2)
-                var tooth = Path()
-                tooth.move(to: start)
-                tooth.addLine(to: end)
-                ctx.stroke(tooth, with: color, style: PicodIconGrid.style)
-            }
-        }
+        PicodSymbolIcon(systemName: "gearshape")
     }
 }
 

@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SettingsView: View {
     let onClose: () -> Void
+    let onInitialize: () -> Void
 
     @AppStorage("pref_language") private var language = "en"
     @AppStorage("pref_time_format") private var timeFormat = "24h"
@@ -18,6 +19,20 @@ struct SettingsView: View {
         return "v\(short) (\(build))"
     }
 
+    private let selectedFill = Color(hex: "433426")
+    private let aboutColorZh = Color(hex: "655341")
+    private let aboutColorEn = Color(hex: "5A4736")
+    private let versionInk = Color(hex: "7A6B5C")
+    private let optionGroupWidth: CGFloat = 174
+
+    private var aboutColor: Color {
+        isChinese ? aboutColorZh : aboutColorEn
+    }
+
+    private func adjusted(_ size: CGFloat) -> CGFloat {
+        isChinese ? size * 0.93 : size
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             Capsule()
@@ -28,7 +43,7 @@ struct SettingsView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    settingBlock(title: isChinese ? "语言" : "Language") {
+                    settingRow(title: isChinese ? "语言" : "Language") {
                         optionGrid(
                             current: language,
                             options: [("en", "EN"), ("zh", "中文")],
@@ -38,7 +53,7 @@ struct SettingsView: View {
 
                     divider
 
-                    settingBlock(title: isChinese ? "时间" : "Time") {
+                    settingRow(title: isChinese ? "时间" : "Time") {
                         optionGrid(
                             current: timeFormat,
                             options: [("12h", "12h"), ("24h", "24h")],
@@ -48,7 +63,7 @@ struct SettingsView: View {
 
                     divider
 
-                    settingBlock(title: isChinese ? "减少动态效果" : "Reduce Motion") {
+                    settingRow(title: isChinese ? "减少动态效果" : "Reduce Motion") {
                         optionGrid(
                             current: reduceMotion ? "on" : "off",
                             options: [("on", isChinese ? "开" : "On"), ("off", isChinese ? "关" : "Off")],
@@ -56,26 +71,41 @@ struct SettingsView: View {
                         )
                     }
 
-                    divider
-
                     VStack(alignment: .leading, spacing: 8) {
+                        Button(action: onInitialize) {
+                            Text("initialize")
+                                .font(PicodFont.monoBold(14))
+                                .foregroundStyle(Color.picod_paper)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 40)
+                                .background(Color.black)
+                                .overlay {
+                                    RoundedRectangle(cornerRadius: 3)
+                                        .stroke(Color.picod_ink.opacity(0.9), lineWidth: 1)
+                                }
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.bottom, 6)
+
                         Text(isChinese
-                             ? "picod 是一个安静的陪伴者，\n记录每一天细小的观察。"
-                             : "picod is a quiet companion\nfor everyday observations.")
-                            .font(PicodFont.mono(14))
-                            .foregroundStyle(Color.picod_ink)
-                            .lineSpacing(2)
+                             ? "picod 是一个安静的陪伴者，记录每一天细小的观察。"
+                             : "picod is a quiet companion for everyday observations.")
+                            .font(PicodFont.mono(adjusted(15.4)))
+                            .foregroundStyle(aboutColor)
+                            .lineSpacing(isChinese ? 3.2 : 2.6)
 
                         Text(versionText)
                             .font(PicodFont.mono(12))
-                            .foregroundStyle(Color.picod_ink)
+                            .foregroundStyle(versionInk)
+                            .kerning(0.4)
                     }
                     .padding(.horizontal, 8)
-                    .padding(.vertical, 12)
+                    .padding(.top, 44)
+                    .padding(.bottom, 8)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .padding(.horizontal, 16)
-                .padding(.bottom, 16)
+                .padding(.bottom, 72)
             }
         }
         .background(Color.picod_paper)
@@ -83,18 +113,21 @@ struct SettingsView: View {
 
     private var divider: some View {
         Rectangle()
-            .fill(Color.picod_ink)
+            .fill(Color.picod_ink.opacity(0.85))
             .frame(height: 1)
     }
 
-    private func settingBlock<Content: View>(title: String, @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
+    private func settingRow<Content: View>(title: String, @ViewBuilder content: () -> Content) -> some View {
+        HStack(alignment: .center, spacing: 10) {
             Text(title)
-                .font(PicodFont.displayMD)
-                .foregroundStyle(Color.picod_ink)
+                .font(PicodFont.display(adjusted(16)))
+                .foregroundStyle(Color.picod_ink2)
                 .lineLimit(1)
 
+            Spacer(minLength: 10)
+
             content()
+                .frame(width: optionGroupWidth, alignment: .trailing)
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 12)
@@ -105,7 +138,7 @@ struct SettingsView: View {
         options: [(value: String, title: String)],
         onSelect: @escaping (String) -> Void
     ) -> some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 8) {
             ForEach(options, id: \.value) { option in
                 optionButton(
                     title: option.title,
@@ -113,20 +146,20 @@ struct SettingsView: View {
                     action: { onSelect(option.value) }
                 )
             }
-            Spacer(minLength: 0)
         }
+        .frame(maxWidth: .infinity, alignment: .trailing)
     }
 
     private func optionButton(title: String, selected: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(title)
-                .font(PicodFont.monoBold(14))
-                .foregroundStyle(selected ? Color.picod_paper : Color.picod_ink)
-                .frame(minWidth: 70, minHeight: 44)
-                .background(selected ? Color.picod_ink : Color.picod_paper)
+                .font(isChinese ? PicodFont.mono(16) : PicodFont.monoBold(16))
+                .foregroundStyle(selected ? Color.picod_paper : Color.picod_ink2)
+                .frame(minWidth: 58, minHeight: 38)
+                .background(selected ? selectedFill : Color.picod_paper2.opacity(0.96))
                 .overlay {
-                    RoundedRectangle(cornerRadius: 4)
-                        .stroke(Color.picod_ink, lineWidth: 2)
+                    RoundedRectangle(cornerRadius: 3)
+                        .stroke(Color.picod_ink.opacity(0.84), lineWidth: 1.5)
                 }
         }
         .buttonStyle(.plain)
@@ -136,6 +169,6 @@ struct SettingsView: View {
 }
 
 #Preview {
-    SettingsView(onClose: {})
+    SettingsView(onClose: {}, onInitialize: {})
         .frame(width: 390, height: 420)
 }

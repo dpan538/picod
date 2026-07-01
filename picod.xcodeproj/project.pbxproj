@@ -6,8 +6,62 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		02A19E0D2F8889A800AA3F91 /* TECHNICAL_NARRATIVE_SPEC.md in Resources */ = {isa = PBXBuildFile; fileRef = 02A19E0C2F8889A800AA3F91 /* TECHNICAL_NARRATIVE_SPEC.md */; };
+		02A19E0F2F8889B800AA3F91 /* WORLDVIEW.md in Resources */ = {isa = PBXBuildFile; fileRef = 02A19E0E2F8889B800AA3F91 /* WORLDVIEW.md */; };
+		02A19E112F8889C000AA3F91 /* STORYLINES_FIRST_BATCH.md in Resources */ = {isa = PBXBuildFile; fileRef = 02A19E102F8889C000AA3F91 /* STORYLINES_FIRST_BATCH.md */; };
+		02A19E1C2F889F7C00AA3F91 /* FILE_TYPE_CLASSIFICATION.md in Resources */ = {isa = PBXBuildFile; fileRef = 02A19E1B2F889F7C00AA3F91 /* FILE_TYPE_CLASSIFICATION.md */; };
+		02A19E352F889FD300AA3F91 /* STORYLINES_SECOND_BATCH.md in Resources */ = {isa = PBXBuildFile; fileRef = 02A19E342F889FD300AA3F91 /* STORYLINES_SECOND_BATCH.md */; };
+		02A19E862F8A87D200AA3F91 /* PicoLineageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02A19E852F8A87D200AA3F91 /* PicoLineageView.swift */; };
+		02A19E882F8B389B00AA3F91 /* CONTROL_MODE_TECH_SPEC.md in Resources */ = {isa = PBXBuildFile; fileRef = 02A19E872F8B389B00AA3F91 /* CONTROL_MODE_TECH_SPEC.md */; };
+		02A19E8A2F8B39A900AA3F91 /* ControlPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02A19E892F8B39A900AA3F91 /* ControlPanelView.swift */; };
+		02D9B24D2F87257900DD643A /* BUILDING_SPRITE_STYLE_SHEET.md in Resources */ = {isa = PBXBuildFile; fileRef = 02D9B24C2F87257900DD643A /* BUILDING_SPRITE_STYLE_SHEET.md */; };
+		02D9B24F2F8729F500DD643A /* PICOD_DEPTH_CUE_POLICY.md in Resources */ = {isa = PBXBuildFile; fileRef = 02D9B24E2F8729F500DD643A /* PICOD_DEPTH_CUE_POLICY.md */; };
+		02D9B2532F87D25800DD643A /* LOCATION_PHASE1_NOTES.md in Resources */ = {isa = PBXBuildFile; fileRef = 02D9B2522F87D25800DD643A /* LOCATION_PHASE1_NOTES.md */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		020C08002F7E344200CFD038 /* picod.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = picod.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		02A19E0C2F8889A800AA3F91 /* TECHNICAL_NARRATIVE_SPEC.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = TECHNICAL_NARRATIVE_SPEC.md; sourceTree = "<group>"; };
+		02A19E0E2F8889B800AA3F91 /* WORLDVIEW.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = WORLDVIEW.md; sourceTree = "<group>"; };
+		02A19E102F8889C000AA3F91 /* STORYLINES_FIRST_BATCH.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = STORYLINES_FIRST_BATCH.md; sourceTree = "<group>"; };
+		02A19E122F8889DF00AA3F91 /* night_lamplighter.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = night_lamplighter.md; sourceTree = "<group>"; };
+		02A19E132F8889DF00AA3F91 /* lost_backpacker.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = lost_backpacker.md; sourceTree = "<group>"; };
+		02A19E142F8889DF00AA3F91 /* umbrella_woman.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = umbrella_woman.md; sourceTree = "<group>"; };
+		02A19E152F8889DF00AA3F91 /* torii_between_light.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = torii_between_light.md; sourceTree = "<group>"; };
+		02A19E162F8889DF00AA3F91 /* door_knocker.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = door_knocker.md; sourceTree = "<group>"; };
+		02A19E172F8889E000AA3F91 /* mirror_miko.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = mirror_miko.md; sourceTree = "<group>"; };
+		02A19E1B2F889F7C00AA3F91 /* FILE_TYPE_CLASSIFICATION.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = FILE_TYPE_CLASSIFICATION.md; sourceTree = "<group>"; };
+		02A19E1D2F889F7C00AA3F91 /* INDEX.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = INDEX.md; sourceTree = "<group>"; };
+		02A19E1E2F889F9600AA3F91 /* reverse_walker.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = reverse_walker.md; sourceTree = "<group>"; };
+		02A19E1F2F889F9600AA3F91 /* midnight_fortune_keeper.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = midnight_fortune_keeper.md; sourceTree = "<group>"; };
+		02A19E202F889F9700AA3F91 /* paper_effigy.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = paper_effigy.md; sourceTree = "<group>"; };
+		02A19E212F889F9700AA3F91 /* doppel_pico.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = doppel_pico.md; sourceTree = "<group>"; };
+		02A19E222F889F9700AA3F91 /* shadowless_visitor.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = shadowless_visitor.md; sourceTree = "<group>"; };
+		02A19E232F889F9700AA3F91 /* edge_giant_figure.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = edge_giant_figure.md; sourceTree = "<group>"; };
+		02A19E242F889F9700AA3F91 /* speaking_egg.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = speaking_egg.md; sourceTree = "<group>"; };
+		02A19E252F889F9700AA3F91 /* tree_face_watcher.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = tree_face_watcher.md; sourceTree = "<group>"; };
+		02A19E262F889FB200AA3F91 /* hanging_figure.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = hanging_figure.md; sourceTree = "<group>"; };
+		02A19E272F889FB200AA3F91 /* vanishing_bird.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = vanishing_bird.md; sourceTree = "<group>"; };
+		02A19E282F889FB200AA3F91 /* mudling.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = mudling.md; sourceTree = "<group>"; };
+		02A19E292F889FB200AA3F91 /* mirror_fish.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = mirror_fish.md; sourceTree = "<group>"; };
+		02A19E2A2F889FB200AA3F91 /* bone_bird.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = bone_bird.md; sourceTree = "<group>"; };
+		02A19E2B2F889FB200AA3F91 /* growing_worm.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = growing_worm.md; sourceTree = "<group>"; };
+		02A19E2C2F889FB200AA3F91 /* headless_deer.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = headless_deer.md; sourceTree = "<group>"; };
+		02A19E2D2F889FB200AA3F91 /* following_fog.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = following_fog.md; sourceTree = "<group>"; };
+		02A19E2E2F889FC600AA3F91 /* dusk_packer.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = dusk_packer.md; sourceTree = "<group>"; };
+		02A19E2F2F889FC600AA3F91 /* dusk_looking_cat.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = dusk_looking_cat.md; sourceTree = "<group>"; };
+		02A19E302F889FC600AA3F91 /* starcount_elder.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = starcount_elder.md; sourceTree = "<group>"; };
+		02A19E312F889FC600AA3F91 /* midnight_registrar.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = midnight_registrar.md; sourceTree = "<group>"; };
+		02A19E322F889FC600AA3F91 /* bedside_shape.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = bedside_shape.md; sourceTree = "<group>"; };
+		02A19E332F889FC600AA3F91 /* dawn_sweeper.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = dawn_sweeper.md; sourceTree = "<group>"; };
+		02A19E342F889FD300AA3F91 /* STORYLINES_SECOND_BATCH.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = STORYLINES_SECOND_BATCH.md; sourceTree = "<group>"; };
+		02A19E852F8A87D200AA3F91 /* PicoLineageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PicoLineageView.swift; sourceTree = "<group>"; };
+		02A19E872F8B389B00AA3F91 /* CONTROL_MODE_TECH_SPEC.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = CONTROL_MODE_TECH_SPEC.md; sourceTree = "<group>"; };
+		02A19E892F8B39A900AA3F91 /* ControlPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ControlPanelView.swift; sourceTree = "<group>"; };
+		02D9B24C2F87257900DD643A /* BUILDING_SPRITE_STYLE_SHEET.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = BUILDING_SPRITE_STYLE_SHEET.md; sourceTree = "<group>"; };
+		02D9B24E2F8729F500DD643A /* PICOD_DEPTH_CUE_POLICY.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = PICOD_DEPTH_CUE_POLICY.md; sourceTree = "<group>"; };
+		02D9B2522F87D25800DD643A /* LOCATION_PHASE1_NOTES.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = LOCATION_PHASE1_NOTES.md; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -34,6 +88,18 @@
 			children = (
 				020C08022F7E344200CFD038 /* picod */,
 				020C08012F7E344200CFD038 /* Products */,
+				02D9B24C2F87257900DD643A /* BUILDING_SPRITE_STYLE_SHEET.md */,
+				02D9B24E2F8729F500DD643A /* PICOD_DEPTH_CUE_POLICY.md */,
+				02D9B2522F87D25800DD643A /* LOCATION_PHASE1_NOTES.md */,
+				02A19E092F88897B00AA3F91 /* storylines */,
+				02A19E0C2F8889A800AA3F91 /* TECHNICAL_NARRATIVE_SPEC.md */,
+				02A19E0E2F8889B800AA3F91 /* WORLDVIEW.md */,
+				02A19E102F8889C000AA3F91 /* STORYLINES_FIRST_BATCH.md */,
+				02A19E1B2F889F7C00AA3F91 /* FILE_TYPE_CLASSIFICATION.md */,
+				02A19E342F889FD300AA3F91 /* STORYLINES_SECOND_BATCH.md */,
+				02A19E852F8A87D200AA3F91 /* PicoLineageView.swift */,
+				02A19E872F8B389B00AA3F91 /* CONTROL_MODE_TECH_SPEC.md */,
+				02A19E892F8B39A900AA3F91 /* ControlPanelView.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -43,6 +109,50 @@
 				020C08002F7E344200CFD038 /* picod.app */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		02A19E092F88897B00AA3F91 /* storylines */ = {
+			isa = PBXGroup;
+			children = (
+				02A19E122F8889DF00AA3F91 /* night_lamplighter.md */,
+				02A19E132F8889DF00AA3F91 /* lost_backpacker.md */,
+				02A19E142F8889DF00AA3F91 /* umbrella_woman.md */,
+				02A19E152F8889DF00AA3F91 /* torii_between_light.md */,
+				02A19E162F8889DF00AA3F91 /* door_knocker.md */,
+				02A19E172F8889E000AA3F91 /* mirror_miko.md */,
+				02A19E182F889EFF00AA3F91 /* characters */,
+			);
+			path = storylines;
+			sourceTree = "<group>";
+		};
+		02A19E182F889EFF00AA3F91 /* characters */ = {
+			isa = PBXGroup;
+			children = (
+				02A19E1D2F889F7C00AA3F91 /* INDEX.md */,
+				02A19E1E2F889F9600AA3F91 /* reverse_walker.md */,
+				02A19E1F2F889F9600AA3F91 /* midnight_fortune_keeper.md */,
+				02A19E202F889F9700AA3F91 /* paper_effigy.md */,
+				02A19E212F889F9700AA3F91 /* doppel_pico.md */,
+				02A19E222F889F9700AA3F91 /* shadowless_visitor.md */,
+				02A19E232F889F9700AA3F91 /* edge_giant_figure.md */,
+				02A19E242F889F9700AA3F91 /* speaking_egg.md */,
+				02A19E252F889F9700AA3F91 /* tree_face_watcher.md */,
+				02A19E262F889FB200AA3F91 /* hanging_figure.md */,
+				02A19E272F889FB200AA3F91 /* vanishing_bird.md */,
+				02A19E282F889FB200AA3F91 /* mudling.md */,
+				02A19E292F889FB200AA3F91 /* mirror_fish.md */,
+				02A19E2A2F889FB200AA3F91 /* bone_bird.md */,
+				02A19E2B2F889FB200AA3F91 /* growing_worm.md */,
+				02A19E2C2F889FB200AA3F91 /* headless_deer.md */,
+				02A19E2D2F889FB200AA3F91 /* following_fog.md */,
+				02A19E2E2F889FC600AA3F91 /* dusk_packer.md */,
+				02A19E2F2F889FC600AA3F91 /* dusk_looking_cat.md */,
+				02A19E302F889FC600AA3F91 /* starcount_elder.md */,
+				02A19E312F889FC600AA3F91 /* midnight_registrar.md */,
+				02A19E322F889FC600AA3F91 /* bedside_shape.md */,
+				02A19E332F889FC600AA3F91 /* dawn_sweeper.md */,
+			);
+			path = characters;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -109,6 +219,15 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				02A19E0F2F8889B800AA3F91 /* WORLDVIEW.md in Resources */,
+				02D9B2532F87D25800DD643A /* LOCATION_PHASE1_NOTES.md in Resources */,
+				02A19E0D2F8889A800AA3F91 /* TECHNICAL_NARRATIVE_SPEC.md in Resources */,
+				02A19E112F8889C000AA3F91 /* STORYLINES_FIRST_BATCH.md in Resources */,
+				02D9B24F2F8729F500DD643A /* PICOD_DEPTH_CUE_POLICY.md in Resources */,
+				02A19E882F8B389B00AA3F91 /* CONTROL_MODE_TECH_SPEC.md in Resources */,
+				02A19E352F889FD300AA3F91 /* STORYLINES_SECOND_BATCH.md in Resources */,
+				02A19E1C2F889F7C00AA3F91 /* FILE_TYPE_CLASSIFICATION.md in Resources */,
+				02D9B24D2F87257900DD643A /* BUILDING_SPRITE_STYLE_SHEET.md in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -119,6 +238,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				02A19E8A2F8B39A900AA3F91 /* ControlPanelView.swift in Sources */,
+				02A19E862F8A87D200AA3F91 /* PicoLineageView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -177,7 +298,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 26.4;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
@@ -234,7 +355,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 26.4;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
@@ -251,8 +372,10 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 3Y23HX8T6B;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSCameraUsageDescription = "用于拍摄照片并生成像素化预览。";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -282,8 +405,10 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 3Y23HX8T6B;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSCameraUsageDescription = "用于拍摄照片并生成像素化预览。";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
