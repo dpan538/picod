@@ -1,3 +1,4 @@
+import Combine
 import Foundation
 import SwiftUI
 import UIKit
@@ -69,6 +70,13 @@ final class PhotoTraitSnapshotDatabase: ObservableObject {
         load()
     }
 
+    init(fileURL: URL) {
+        self.fileURL = fileURL
+        encoder.dateEncodingStrategy = .iso8601
+        decoder.dateDecodingStrategy = .iso8601
+        load()
+    }
+
     @discardableResult
     func insert(_ snapshot: PhotoTraitSnapshot) -> Bool {
         // Unique constraint: one snapshot per dayKey.
@@ -92,6 +100,12 @@ final class PhotoTraitSnapshotDatabase: ObservableObject {
 
     func snapshot(for dayKey: String) -> PhotoTraitSnapshot? {
         snapshots.first { $0.dayKey == dayKey }
+    }
+
+    func resetAll() {
+        saveTask?.cancel()
+        snapshots = []
+        try? FileManager.default.removeItem(at: fileURL)
     }
 
     private func load() {
@@ -169,6 +183,10 @@ final class PhotoTraitSnapshotDatabase: ObservableObject {
                     alpha: bucket.sumA / c
                 )
             }
+    }
+
+    static func extractBackgroundColor(from image: UIImage) -> PhotoPaletteColor? {
+        extractPalette(from: image, targetCount: 1).first
     }
 
     private static func makeFileURL() -> URL {

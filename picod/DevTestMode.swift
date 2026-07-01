@@ -33,6 +33,9 @@ enum DevTestMode {
     static let renderFullMapInXcodePreview = true
     // Toggle to inspect single-object readability before returning to full-map iteration.
     static let showObjectGalleryDebug = false
+    static let showMockSeed = false
+    static let runPhotoPipelineMockValidation = false
+    static let showPhotoPipelineDebug = false
 
     // Optional keyframe review state: switch among .morning / .afternoon / .dusk / .night.
     // Set to nil to follow the live system clock.

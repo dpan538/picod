@@ -96,7 +96,7 @@ enum MappingDatabase {
     static let firstDayForbiddenFormIds: Set<Int> = [45, 66, 69, 70]
     static let safeHumanFallbackIds: [Int] = [1, 2, 3, 10, 11, 20]
 
-    nonisolated(unsafe) static let synonyms: [String: String] = [
+    nonisolated static let synonyms: [String: String] = [
         "tabby cat": "tabby",
         "lightning bug": "firefly",
         "grey wolf": "wolf",

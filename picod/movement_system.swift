@@ -5,16 +5,19 @@ import Foundation
 final class WorldSimulation: ObservableObject {
     @Published private(set) var petCoord: MapCoord
     @Published private(set) var latestLog: String?
+    @Published private(set) var latestEvent: PetEvent?
     @Published private(set) var petState: PetState
+    @Published private(set) var runtimeProps: [PropPlacement] = []
+    @Published private(set) var runtimeAnimals: [AnimalPlacement] = []
 
-    private let map: TestMap
-    private let blockedCoords: Set<MapCoord>
-    private let treeCoords: [MapCoord]
-    private let birdCoords: [MapCoord]
-    private let signCoords: [MapCoord]
-    private let mushroomCoords: [MapCoord]
-    private let interestingCoords: [MapCoord]
-    private let pondEdgeCoords: [MapCoord]
+    private var map: TestMap
+    private var blockedCoords: Set<MapCoord> = []
+    private var treeCoords: [MapCoord] = []
+    private var birdCoords: [MapCoord] = []
+    private var signCoords: [MapCoord] = []
+    private var mushroomCoords: [MapCoord] = []
+    private var interestingCoords: [MapCoord] = []
+    private var pondEdgeCoords: [MapCoord] = []
 
     private var movementTask: Task<Void, Never>?
     private var rngState: UInt64 = 0x9E3779B97F4A7C15
@@ -23,12 +26,18 @@ final class WorldSimulation: ObservableObject {
     private var quietStepCounter = 0
     private var eventCooldown = 0
     private var currentLanguageCode = "en"
+    private var appState: AppState = .empty
 
     init(map: TestMap) {
         self.map = map
         self.petCoord = map.petSpawn.coord
         self.petState = .initial(languageCode: "en")
+        self.runtimeProps = map.props
+        self.runtimeAnimals = map.animals
+        rebuildSpatialCaches(for: map)
+    }
 
+    private func rebuildSpatialCaches(for map: TestMap) {
         var blocked: Set<MapCoord> = []
         var trees: [MapCoord] = []
         var birds: [MapCoord] = []
@@ -37,17 +46,14 @@ final class WorldSimulation: ObservableObject {
         var interests: [MapCoord] = []
 
         for prop in map.props {
-            switch prop.kind {
-            case .tree, .stump, .rock, .log, .crate, .fence, .bench:
+            if prop.kind.isBlockingForPet {
                 blocked.insert(prop.coord)
-            default:
-                break
             }
 
-            if prop.kind == .tree { trees.append(prop.coord) }
-            if prop.kind == .sign { signs.append(prop.coord) }
-            if prop.kind == .mushroomPatch { mushrooms.append(prop.coord) }
-            if prop.kind == .tree || prop.kind == .sign || prop.kind == .mushroomPatch {
+            if prop.kind.isTreeLike { trees.append(prop.coord) }
+            if prop.kind.isSignLike { signs.append(prop.coord) }
+            if prop.kind.isMushroomLike { mushrooms.append(prop.coord) }
+            if prop.kind.isTreeLike || prop.kind.isSignLike || prop.kind.isMushroomLike {
                 interests.append(prop.coord)
             }
         }
@@ -57,13 +63,13 @@ final class WorldSimulation: ObservableObject {
             interests.append(animal.coord)
         }
 
-        self.blockedCoords = blocked
-        self.treeCoords = trees
-        self.birdCoords = birds
-        self.signCoords = signs
-        self.mushroomCoords = mushrooms
-        self.interestingCoords = interests
-        self.pondEdgeCoords = Self.computePondEdges(for: map, blocked: blocked)
+        blockedCoords = blocked
+        treeCoords = trees
+        birdCoords = birds
+        signCoords = signs
+        mushroomCoords = mushrooms
+        interestingCoords = interests
+        pondEdgeCoords = Self.computePondEdges(for: map, blocked: blocked)
     }
 
     func start(languageCode: String, reduceMotion: Bool) {
@@ -76,7 +82,7 @@ final class WorldSimulation: ObservableObject {
             guard let self else { return }
             while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: UInt64(intervalSeconds * 1_000_000_000))
-                await self.step()
+                self.step()
             }
         }
     }
@@ -84,6 +90,59 @@ final class WorldSimulation: ObservableObject {
     func stop() {
         movementTask?.cancel()
         movementTask = nil
+    }
+
+    func setAppState(_ state: AppState) {
+        appState = state
+        if state != .picoAlive {
+            stop()
+        }
+    }
+
+    func reloadMap(_ nextMap: TestMap, languageCode: String) {
+        stop()
+        map = nextMap
+        petCoord = nextMap.petSpawn.coord
+        petState = .initial(languageCode: languageCode)
+        latestLog = nil
+        latestEvent = nil
+        runtimeProps = nextMap.props
+        runtimeAnimals = nextMap.animals
+        currentLanguageCode = languageCode
+        lastCoord = nil
+        recentTrail = []
+        quietStepCounter = 0
+        eventCooldown = 0
+        rebuildSpatialCaches(for: nextMap)
+    }
+
+    func manualMove(direction: MoveDirection) {
+        let delta: (x: Int, y: Int)
+        switch direction {
+        case .up: delta = (0, -1)
+        case .down: delta = (0, 1)
+        case .left: delta = (-1, 0)
+        case .right: delta = (1, 0)
+        }
+
+        let next = MapCoord(x: petCoord.x + delta.x, y: petCoord.y + delta.y)
+        guard isWalkable(next) else {
+            petState.registerMovementStep(didMove: false)
+            return
+        }
+
+        lastCoord = petCoord
+        petCoord = next
+        appendTrail(next)
+        petState.registerMovementStep(didMove: true)
+
+        if let event = detectInteractionEvent(at: next) {
+            petState.register(event: event)
+            latestLog = event.summary
+            latestEvent = event
+            quietStepCounter = 0
+            eventCooldown = 2
+        }
     }
 
     func initialLog(languageCode: String) -> String {
@@ -101,6 +160,22 @@ final class WorldSimulation: ObservableObject {
             summary: line
         )
         petState.register(event: tapEvent)
+        latestEvent = tapEvent
+        return line
+    }
+
+    func checkIn(weatherCondition: WeatherCondition, formId: Int, languageCode: String) -> String {
+        currentLanguageCode = languageCode
+        let personality = formId > 0 ? MappingDatabase.personality(for: formId) : PicoPersonality.natural
+        let line = PetResponseGenerator.response(
+            for: petState,
+            weather: weatherCondition,
+            personality: personality,
+            languageCode: languageCode
+        )
+        let tapEvent = PetEvent(type: .tappedByUser, summary: line)
+        petState.register(event: tapEvent)
+        latestEvent = tapEvent
         return line
     }
 
@@ -131,6 +206,7 @@ final class WorldSimulation: ObservableObject {
         if let event = detectInteractionEvent(at: petCoord) {
             petState.register(event: event)
             latestLog = event.summary
+            latestEvent = event
             quietStepCounter = 0
             eventCooldown = 2
             return
@@ -150,6 +226,7 @@ final class WorldSimulation: ObservableObject {
         let event = PetEvent(type: .wandered, summary: line)
         petState.register(event: event)
         latestLog = line
+        latestEvent = event
         quietStepCounter = 0
     }
 
@@ -249,7 +326,7 @@ final class WorldSimulation: ObservableObject {
         }
 
         let terrain = map.terrain.landform(at: coord)
-        if terrain == .water || terrain == .stone {
+        if terrain.isWaterLike || terrain == .stone || terrain == .stoneGround {
             return false
         }
 
@@ -259,7 +336,7 @@ final class WorldSimulation: ObservableObject {
     private func detectInteractionEvent(at coord: MapCoord) -> PetEvent? {
         guard eventCooldown == 0 else { return nil }
 
-        if let bird = nearestMatch(to: coord, points: birdCoords, maxDistance: 1) {
+        if nearestMatch(to: coord, points: birdCoords, maxDistance: 1) != nil {
             return PetEvent(
                 type: .sawAnimal,
                 summary: currentLanguageCode == "zh"
@@ -322,7 +399,7 @@ final class WorldSimulation: ObservableObject {
     private func isNearPond(_ coord: MapCoord) -> Bool {
         for y in max(0, coord.y - 1)...min(map.height - 1, coord.y + 1) {
             for x in max(0, coord.x - 1)...min(map.width - 1, coord.x + 1) {
-                if map.terrain.landform(at: .init(x: x, y: y)) == .water {
+                if map.terrain.landform(at: .init(x: x, y: y)).isWaterLike {
                     return true
                 }
             }
@@ -354,7 +431,7 @@ final class WorldSimulation: ObservableObject {
         for y in 0..<map.height {
             for x in 0..<map.width {
                 let coord = MapCoord(x: x, y: y)
-                if map.terrain.landform(at: coord) == .water {
+                if map.terrain.landform(at: coord).isWaterLike {
                     continue
                 }
 
@@ -370,7 +447,7 @@ final class WorldSimulation: ObservableObject {
                 ]
 
                 let hasWaterNeighbor = neighbors.contains { n in
-                    n.x >= 0 && n.y >= 0 && n.x < map.width && n.y < map.height && map.terrain.landform(at: n) == .water
+                    n.x >= 0 && n.y >= 0 && n.x < map.width && n.y < map.height && map.terrain.landform(at: n).isWaterLike
                 }
 
                 if hasWaterNeighbor {

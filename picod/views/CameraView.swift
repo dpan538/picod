@@ -9,6 +9,7 @@ import SwiftUI
 struct CameraView: View {
     @ObservedObject var camera: CameraManager
     let statusLine: String
+    let onCancel: () -> Void
     let onCapture: (UIImage) -> Void
 
     @State private var shutterFlash = false

@@ -24,7 +24,7 @@ enum PhotoClassificationPipeline {
 
                 do {
                     try handler.perform([request])
-                    let observations = (request.results as? [VNClassificationObservation]) ?? []
+                    let observations = request.results ?? []
                     let labels = observations
                         .prefix(topN)
                         .map { VisionLabel(identifier: $0.identifier, confidence: $0.confidence) }
@@ -65,6 +65,16 @@ enum PhotoClassificationPipeline {
             rawVisionTopN: rawVisionTopN,
             normalizedLabels: normalizedLabels
         )
+    }
+
+    static func resolve(
+        from rawLabels: [(identifier: String, confidence: Float)],
+        dominantColor: HSBColor?,
+        dayIndex: Int,
+        previousGenerationDay1FormId: Int?,
+        lastChosenFormId: Int?
+    ) -> PhotoClassificationPipelineOutput {
+        resolve(from: rawLabels)
     }
 
     private static func computeClusterScores(labels: [VisionLabel]) -> [ClusterScore] {

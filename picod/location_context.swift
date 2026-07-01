@@ -1,3 +1,4 @@
+import Combine
 import CoreLocation
 import Foundation
 
@@ -313,11 +314,11 @@ final class PicodWorldInputService: NSObject, ObservableObject, CLLocationManage
     private var lastResolvedLocation: CLLocation?
 
     init(
-        weatherProvider: PicodWeatherProviding = WeatherKitPicodProvider(),
-        influenceProvider: EnvironmentalInfluenceProviding = HeuristicEnvironmentalInfluenceProvider()
+        weatherProvider: PicodWeatherProviding? = nil,
+        influenceProvider: EnvironmentalInfluenceProviding? = nil
     ) {
-        self.weatherProvider = weatherProvider
-        self.influenceProvider = influenceProvider
+        self.weatherProvider = weatherProvider ?? WeatherKitPicodProvider()
+        self.influenceProvider = influenceProvider ?? HeuristicEnvironmentalInfluenceProvider()
         super.init()
         manager.delegate = self
         manager.desiredAccuracy = kCLLocationAccuracyHundredMeters

@@ -1,13 +1,33 @@
 import Foundation
 
 enum PropKind: String, CaseIterable, Codable {
+    // Legacy authored-map aliases
+    case tree
+    case bush
+    case sign
+    case log
+    case reed
+    case rock
+    case flower
+    case fence
+
     // Flora / natural props
     case roundTree
     case tallTree
+    case bigTree
+    case cherryTree
+    case weepingCherry
+    case cherryClump
+    case sacredEvergreen
+    case gardenPine
+    case tallPine
+    case dwarfPine
     case smallBush
     case denseBush
+    case bushDense
     case pinkFlower
     case yellowFlower
+    case flowerBed
     case mushroomPatch
     case reedCluster
     case stump
@@ -28,6 +48,20 @@ enum PropKind: String, CaseIterable, Codable {
     case shrineSmall
     case tinyShed
     case kiosk
+    case house
+    case mansion
+    case japaneseHouse
+    case japaneseSmallHouse
+    case pagoda
+    case torii
+    case dock
+    case lowWall
+    case japaneseBridge
+    case stoneLanternJp
+    case car
+    case orangeTruck
+    case billboard
+    case windmill
 }
 
 struct PropPlacement: Hashable, Codable {
@@ -38,9 +72,15 @@ struct PropPlacement: Hashable, Codable {
 extension PropKind {
     var isBlockingForPet: Bool {
         switch self {
-        case .roundTree, .tallTree, .denseBush, .stump, .fallenLog, .largeRock,
+        case .tree, .rock, .log, .fence,
+             .roundTree, .tallTree, .bigTree, .cherryTree, .weepingCherry,
+             .cherryClump, .sacredEvergreen, .gardenPine, .tallPine, .dwarfPine,
+             .denseBush, .bushDense, .stump, .fallenLog, .largeRock,
              .bench, .fenceShort, .crate, .mailbox, .stoneWell, .bridgeShort,
-             .gate, .shrineSmall, .tinyShed, .kiosk:
+             .gate, .shrineSmall, .tinyShed, .kiosk, .house, .mansion,
+             .japaneseHouse, .japaneseSmallHouse, .pagoda, .torii, .dock,
+             .lowWall, .japaneseBridge, .stoneLanternJp, .car, .orangeTruck,
+             .billboard, .windmill:
             return true
         default:
             return false
@@ -48,11 +88,17 @@ extension PropKind {
     }
 
     var isTreeLike: Bool {
-        self == .roundTree || self == .tallTree
+        switch self {
+        case .tree, .roundTree, .tallTree, .bigTree, .cherryTree, .weepingCherry,
+             .cherryClump, .sacredEvergreen, .gardenPine, .tallPine, .dwarfPine:
+            return true
+        default:
+            return false
+        }
     }
 
     var isSignLike: Bool {
-        self == .signpost
+        self == .sign || self == .signpost
     }
 
     var isMushroomLike: Bool {

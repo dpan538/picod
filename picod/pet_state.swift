@@ -97,13 +97,19 @@ struct PetState: Codable {
         appendRecent(event)
 
         if let animal = event.sourceAnimal {
-            appendUnique(animal, into: &seenAnimalsToday)
+            if !seenAnimalsToday.contains(animal) {
+                seenAnimalsToday.append(animal)
+            }
         }
         if let prop = event.sourceProp {
-            appendUnique(prop, into: &seenPropsToday)
+            if !seenPropsToday.contains(prop) {
+                seenPropsToday.append(prop)
+            }
         }
         if let place = event.sourcePlace {
-            appendUnique(place, into: &seenPlacesToday)
+            if !seenPlacesToday.contains(place) {
+                seenPlacesToday.append(place)
+            }
         }
 
         switch event.type {
@@ -143,11 +149,6 @@ struct PetState: Codable {
         if recentEvents.count > 20 {
             recentEvents.removeFirst(recentEvents.count - 20)
         }
-    }
-
-    private mutating func appendUnique<T: Equatable>(_ value: T, into array: inout [T]) {
-        guard !array.contains(value) else { return }
-        array.append(value)
     }
 
     private func clamp(_ value: Int) -> Int {

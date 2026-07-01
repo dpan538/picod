@@ -7,11 +7,37 @@ struct MapCoord: Hashable, Codable {
 
 enum Landform: String, CaseIterable, Codable {
     case grass
+    case tallGrass
     case dirt
+    case wornPath
     case water
     case sand
     case flowerPatch
     case stone
+    case stoneGround
+    case mud
+    case mossGround
+    case pond
+    case shallowWater
+    case deepWater
+    case reedsEdge
+    case wetBank
+    case smallHill
+    case cliffEdge
+    case forestEdge
+    case groveFloor
+    case clearing
+}
+
+extension Landform {
+    var isWaterLike: Bool {
+        switch self {
+        case .water, .pond, .shallowWater, .deepWater:
+            return true
+        default:
+            return false
+        }
+    }
 }
 
 struct TerrainLayer: Codable {

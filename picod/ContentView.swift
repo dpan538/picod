@@ -920,11 +920,14 @@ struct ContentView: View {
         let label: String
         if languageCode == "zh" {
             switch condition {
-            case .clear: label = "晴"
+            case .sunny: label = "晴"
             case .cloudy: label = "多云"
+            case .partlyCloudy: label = "晴间多云"
             case .rainy: label = "雨"
             case .stormy: label = "雷雨"
+            case .snowy: label = "雪"
             case .foggy: label = "雾"
+            case .night: label = "夜"
             }
         } else {
             label = condition.title

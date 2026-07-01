@@ -65,7 +65,7 @@ struct WorldParticipationEngine {
                 ? orderedGenerationIds[generationIndex]
                 : nil
 
-            let participation = generationId.map { participation(for: $0) }
+            let participation = generationId.map { self.participation(for: $0) }
                 ?? GenerationParticipation(
                     daysPhotographed: 0,
                     consecutiveDays: 0,

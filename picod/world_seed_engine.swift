@@ -37,6 +37,34 @@ struct WorldSeed: Codable, Equatable {
 }
 
 struct WorldSeedEngine {
+    static func mockGenerate() -> WorldSeed {
+        WorldSeed(
+            generationId: "mock_generation",
+            dayKey: "mock_generation_day7",
+            terrainWarmBias: 0.1,
+            terrainBrightness: 0.62,
+            personalityTerrainTag: .natural,
+            waterExpansion: 0.12,
+            waterClarity: 0.58,
+            vegetationDensity: 1.1,
+            vineProbability: 0.08,
+            courtyardExpansion: 0.05,
+            toriiProbabilityBonus: 0.1,
+            pathExtension: 1,
+            pathCondition: 0.9,
+            propWeights: [
+                "cherryTree": 0.3,
+                "stoneLantern": 0.2,
+                "reed": 0.15
+            ],
+            npcProbabilityBonuses: [
+                "animal": 0.2,
+                "shrineMaiden": 0.1
+            ],
+            participationMultiplier: 1.0
+        )
+    }
+
     func generate(
         snapshots: [PhotoTraitSnapshot],
         participation: GenerationParticipation,

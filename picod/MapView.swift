@@ -10,12 +10,32 @@ struct MapView: View {
     let testMap: TestMap?
     let showPetSpawn: Bool
     let petCoord: MapCoord?
+    let petFormId: Int
+    let petAccentHex: String?
+    let runtimeProps: [PropPlacement]
+    let runtimeAnimals: [AnimalPlacement]
+    let ambientCurve: MapAmbientMoodCurve
 
-    init(tileSize: CGFloat = 10, testMap: TestMap? = nil, showPetSpawn: Bool = false, petCoord: MapCoord? = nil) {
+    init(
+        tileSize: CGFloat = 10,
+        testMap: TestMap? = nil,
+        showPetSpawn: Bool = false,
+        petCoord: MapCoord? = nil,
+        petFormId: Int = 0,
+        petAccentHex: String? = nil,
+        runtimeProps: [PropPlacement] = [],
+        runtimeAnimals: [AnimalPlacement] = [],
+        ambientCurve: MapAmbientMoodCurve = .neutral
+    ) {
         self.tileSize = tileSize
         self.testMap = testMap
         self.showPetSpawn = showPetSpawn
         self.petCoord = petCoord
+        self.petFormId = petFormId
+        self.petAccentHex = petAccentHex
+        self.runtimeProps = runtimeProps
+        self.runtimeAnimals = runtimeAnimals
+        self.ambientCurve = ambientCurve
     }
 
     var body: some View {
@@ -72,10 +92,12 @@ struct MapView: View {
             ctx.stroke(line, with: .color(gridColor), lineWidth: 0.5)
         }
 
+        let props = runtimeProps.isEmpty ? map.props : runtimeProps
+        let animals = runtimeAnimals.isEmpty ? map.animals : runtimeAnimals
         var layers: [RenderableObject] = []
-        layers.reserveCapacity(map.props.count + map.animals.count + 1)
-        for p in map.props { layers.append(.prop(p)) }
-        for a in map.animals { layers.append(.animal(a)) }
+        layers.reserveCapacity(props.count + animals.count + 1)
+        for p in props { layers.append(.prop(p)) }
+        for a in animals { layers.append(.animal(a)) }
         if let active = petCoord {
             layers.append(.pet(active))
         } else if showPetSpawn {
@@ -111,7 +133,7 @@ struct MapView: View {
             fill(p.grass)
             dot(v==0 ? 2:5, v2==0 ? 2:5, p.grassDark); dot(v==0 ? 6:1, v2==0 ? 6:3, p.grassDark)
             if v2==0 { dot(4, 4, p.grassLight) }
-        case .tallGrass:
+        case .tallGrass, .forestEdge:
             fill(p.grassDark)
             dot(2, v==0 ? 1:3, p.grass); dot(2, v==0 ? 2:4, p.grass)
             dot(4, v2==0 ? 5:2, p.grass); dot(4, v2==0 ? 6:3, p.grass); dot(6, 4, p.grassLight)
@@ -126,7 +148,7 @@ struct MapView: View {
         case .sand:
             fill(p.sand)
             dot(v==0 ? 1:4, v2==0 ? 2:5, p.sandDark); dot(v==0 ? 5:2, v2==0 ? 6:1, p.sandDark)
-        case .stoneGround:
+        case .stone, .stoneGround:
             fill(p.stone)
             hLine(3, 0, 7, p.stoneDark)
             dot(0, v==0 ? 4:2, p.stoneDark); dot(1, v==0 ? 4:2, p.stoneDark); dot(2, v==0 ? 4:2, p.stoneDark)
@@ -135,7 +157,7 @@ struct MapView: View {
             fill(p.mud); dot(2, v==0 ? 2:5, p.mudDark); dot(4, v2==0 ? 4:1, p.mudDark); dot(5, v==0 ? 6:3, p.mudDark)
         case .mossGround:
             fill(p.moss); dot(1, v==0 ? 2:5, p.mossDark); dot(3, v2==0 ? 4:1, p.mossDark); dot(5, v==0 ? 6:3, p.mossDark); dot(4, 2, p.grass)
-        case .pond, .shallowWater:
+        case .water, .pond, .shallowWater:
             fill(p.shallowWater)
             hLine(v==0 ? 2:5, v2==0 ? 1:3, v2==0 ? 3:5, p.waterHighlight)
             hLine(v==0 ? 5:2, v2==0 ? 5:1, v2==0 ? 6:2, p.waterHighlight)
@@ -196,9 +218,9 @@ struct MapView: View {
     private func terrainBaseColor(_ l: Landform) -> Color {
         let p = pal
         switch l {
-        case .grass: return p.grass; case .tallGrass: return p.grassDark; case .dirt: return p.dirt
-        case .wornPath: return p.pathBase; case .sand: return p.sand; case .stoneGround: return p.stone
-        case .mud: return p.mud; case .mossGround: return p.moss; case .pond, .shallowWater: return p.shallowWater
+        case .grass: return p.grass; case .tallGrass, .forestEdge: return p.grassDark; case .dirt: return p.dirt
+        case .wornPath: return p.pathBase; case .sand: return p.sand; case .stone, .stoneGround: return p.stone
+        case .mud: return p.mud; case .mossGround: return p.moss; case .water, .pond, .shallowWater: return p.shallowWater
         case .deepWater: return p.deepWater; case .reedsEdge: return p.wetBank; case .wetBank: return p.wetBank
         case .smallHill: return p.hill; case .cliffEdge: return p.cliff; case .clearing: return p.clearing
         case .groveFloor: return p.groveFloor; case .flowerPatch: return p.clearing
@@ -247,21 +269,21 @@ struct MapView: View {
     // MARK: - Prop Specs
     private func propSpec(for k: PropKind) -> SpriteSpec {
         switch k {
-        case .house: return SpriteSpec(tileFootprint: CGSize(width: 4, height: 5), palette: [
+        case .house, .mansion, .japaneseHouse: return SpriteSpec(tileFootprint: CGSize(width: 4, height: 5), palette: [
             Color(hex: "8090A0"),Color(hex: "606878"),Color(hex: "A8B8C8"),Color(hex: "E8D8C0"),Color(hex: "C8B8A0"),
             Color(hex: "506878"),Color(hex: "886848"),Color(hex: "685038"),Color(hex: "A07060"),Color(hex: "808078"),
             Color(hex: "3A3228"),Color(hex: "B0A898")], pixels: PA.house)
-        case .roundTree: return SpriteSpec(tileFootprint: CGSize(width: 3, height: 4), palette: [
+        case .tree, .roundTree, .cherryTree, .weepingCherry, .cherryClump, .sacredEvergreen, .gardenPine, .dwarfPine: return SpriteSpec(tileFootprint: CGSize(width: 3, height: 4), palette: [
             Color(hex: "6CA050"),Color(hex: "4A7838"),Color(hex: "3A6030"),Color(hex: "88C068"),Color(hex: "806040"),Color(hex: "5A4030")], pixels: PA.roundTree)
-        case .tallTree: return SpriteSpec(tileFootprint: CGSize(width: 3, height: 4), palette: [
+        case .tallTree, .tallPine: return SpriteSpec(tileFootprint: CGSize(width: 3, height: 4), palette: [
             Color(hex: "4A7838"),Color(hex: "3A6030"),Color(hex: "6CA050"),Color(hex: "88C068"),Color(hex: "806040"),Color(hex: "5A4030")], pixels: PA.tallTree)
         case .bigTree: return SpriteSpec(tileFootprint: CGSize(width: 4, height: 5), palette: [
             Color(hex: "5A8848"),Color(hex: "3E6830"),Color(hex: "7AB060"),Color(hex: "98D078"),Color(hex: "705838"),Color(hex: "503820")], pixels: PA.bigTree)
-        case .smallBush: return SpriteSpec(tileFootprint: CGSize(width: 2, height: 1), palette: [
+        case .bush, .smallBush: return SpriteSpec(tileFootprint: CGSize(width: 2, height: 1), palette: [
             Color(hex: "3E5638"),Color(hex: "5A7848"),Color(hex: "88C068")], pixels: PA.smallBush)
-        case .denseBush: return SpriteSpec(tileFootprint: CGSize(width: 3, height: 2), palette: [
+        case .denseBush, .bushDense: return SpriteSpec(tileFootprint: CGSize(width: 3, height: 2), palette: [
             Color(hex: "3E5638"),Color(hex: "4F6A47"),Color(hex: "6CA050"),Color(hex: "88C068")], pixels: PA.denseBush)
-        case .pinkFlower: return SpriteSpec(tileFootprint: CGSize(width: 1, height: 1), palette: [
+        case .flower, .pinkFlower: return SpriteSpec(tileFootprint: CGSize(width: 1, height: 1), palette: [
             Color(hex: "D87090"),Color(hex: "E8A0B0"),Color(hex: "C85070"),Color(hex: "4A7838")], pixels: PA.flower, hasShadow: false)
         case .yellowFlower: return SpriteSpec(tileFootprint: CGSize(width: 1, height: 1), palette: [
             Color(hex: "D8B040"),Color(hex: "E8D070"),Color(hex: "C89830"),Color(hex: "4A7838")], pixels: PA.flower, hasShadow: false)
@@ -269,41 +291,41 @@ struct MapView: View {
             Color(hex: "D87090"),Color(hex: "E8D070"),Color(hex: "C85070"),Color(hex: "4A7838"),Color(hex: "D8B040")], pixels: PA.flowerBed, hasShadow: false)
         case .mushroomPatch: return SpriteSpec(tileFootprint: CGSize(width: 1, height: 1), palette: [
             Color(hex: "C88060"),Color(hex: "E8C8A0"),Color(hex: "D8D0C0")], pixels: PA.mushroom, hasShadow: false)
-        case .reedCluster: return SpriteSpec(tileFootprint: CGSize(width: 2, height: 2), palette: [
+        case .reed, .reedCluster: return SpriteSpec(tileFootprint: CGSize(width: 2, height: 2), palette: [
             Color(hex: "5B744A"),Color(hex: "7A9860")], pixels: PA.reedCluster, hasShadow: false)
         case .stump: return SpriteSpec(tileFootprint: CGSize(width: 1, height: 1), palette: [
             Color(hex: "806040"),Color(hex: "6C513A"),Color(hex: "A08060")], pixels: PA.stump)
-        case .fallenLog: return SpriteSpec(tileFootprint: CGSize(width: 2, height: 1), palette: [
+        case .log, .fallenLog: return SpriteSpec(tileFootprint: CGSize(width: 2, height: 1), palette: [
             Color(hex: "806040"),Color(hex: "6C513A"),Color(hex: "A08060")], pixels: PA.fallenLog)
-        case .smallRock: return SpriteSpec(tileFootprint: CGSize(width: 1, height: 1), palette: [
+        case .rock, .smallRock: return SpriteSpec(tileFootprint: CGSize(width: 1, height: 1), palette: [
             Color(hex: "706860"),Color(hex: "908880"),Color(hex: "B0A8A0")], pixels: PA.smallRock)
         case .largeRock: return SpriteSpec(tileFootprint: CGSize(width: 3, height: 2), palette: [
             Color(hex: "706860"),Color(hex: "908880"),Color(hex: "B0A8A0"),Color(hex: "585050")], pixels: PA.largeRock)
-        case .signpost: return SpriteSpec(tileFootprint: CGSize(width: 1, height: 2), palette: [
+        case .sign, .signpost: return SpriteSpec(tileFootprint: CGSize(width: 1, height: 2), palette: [
             Color(hex: "806040"),Color(hex: "6C513A"),Color(hex: "A08060"),Color(hex: "E8D8C0")], pixels: PA.signpost)
         case .bench: return SpriteSpec(tileFootprint: CGSize(width: 2, height: 1), palette: [
             Color(hex: "806040"),Color(hex: "6C513A"),Color(hex: "A08060")], pixels: PA.bench)
-        case .fenceShort: return SpriteSpec(tileFootprint: CGSize(width: 1, height: 1), palette: [
+        case .fence, .fenceShort, .lowWall: return SpriteSpec(tileFootprint: CGSize(width: 1, height: 1), palette: [
             Color(hex: "806040"),Color(hex: "6C513A")], pixels: PA.fence)
         case .crate: return SpriteSpec(tileFootprint: CGSize(width: 1, height: 1), palette: [
             Color(hex: "806040"),Color(hex: "6C513A"),Color(hex: "A08060")], pixels: PA.crate)
-        case .lantern: return SpriteSpec(tileFootprint: CGSize(width: 1, height: 2), palette: [
+        case .lantern, .stoneLanternJp: return SpriteSpec(tileFootprint: CGSize(width: 1, height: 2), palette: [
             Color(hex: "585050"),Color(hex: "E8C848"),Color(hex: "706860")], pixels: PA.lantern)
         case .mailbox: return SpriteSpec(tileFootprint: CGSize(width: 1, height: 2), palette: [
             Color(hex: "806040"),Color(hex: "6C513A"),Color(hex: "B85040"),Color(hex: "903828")], pixels: PA.mailbox)
         case .stoneWell: return SpriteSpec(tileFootprint: CGSize(width: 2, height: 2), palette: [
             Color(hex: "908880"),Color(hex: "706860"),Color(hex: "B0A8A0"),Color(hex: "628BA2"),Color(hex: "806040")], pixels: PA.well)
-        case .bridgeShort: return SpriteSpec(tileFootprint: CGSize(width: 2, height: 1), palette: [
+        case .bridgeShort, .dock, .japaneseBridge: return SpriteSpec(tileFootprint: CGSize(width: 2, height: 1), palette: [
             Color(hex: "806040"),Color(hex: "6C513A"),Color(hex: "A08060")], pixels: PA.bridge)
-        case .gate: return SpriteSpec(tileFootprint: CGSize(width: 2, height: 2), palette: [
+        case .gate, .torii: return SpriteSpec(tileFootprint: CGSize(width: 2, height: 2), palette: [
             Color(hex: "6C513A"),Color(hex: "806040"),Color(hex: "585050")], pixels: PA.gate)
-        case .shrineSmall: return SpriteSpec(tileFootprint: CGSize(width: 2, height: 3), palette: [
+        case .shrineSmall, .pagoda: return SpriteSpec(tileFootprint: CGSize(width: 2, height: 3), palette: [
             Color(hex: "908880"),Color(hex: "706860"),Color(hex: "B0A8A0"),Color(hex: "B85040")], pixels: PA.shrine)
-        case .tinyShed: return SpriteSpec(tileFootprint: CGSize(width: 3, height: 3), palette: [
+        case .tinyShed, .japaneseSmallHouse: return SpriteSpec(tileFootprint: CGSize(width: 3, height: 3), palette: [
             Color(hex: "806040"),Color(hex: "6C513A"),Color(hex: "908880"),Color(hex: "706860"),Color(hex: "E8D8C0")], pixels: PA.shed)
         case .kiosk: return SpriteSpec(tileFootprint: CGSize(width: 2, height: 2), palette: [
             Color(hex: "806040"),Color(hex: "6C513A"),Color(hex: "E8D8C0"),Color(hex: "B85040")], pixels: PA.kiosk)
-        case .car: return SpriteSpec(tileFootprint: CGSize(width: 3, height: 2), palette: [
+        case .car, .orangeTruck: return SpriteSpec(tileFootprint: CGSize(width: 3, height: 2), palette: [
             Color(hex: "7888A0"),Color(hex: "586878"),Color(hex: "A8B8C8"),Color(hex: "D0D8E0"),Color(hex: "2A2825"),Color(hex: "B85040")], pixels: PA.car)
         case .billboard: return SpriteSpec(tileFootprint: CGSize(width: 2, height: 3), palette: [
             Color(hex: "806040"),Color(hex: "6C513A"),Color(hex: "E8E0D0"),Color(hex: "B85040"),Color(hex: "5888A8")], pixels: PA.billboard)
@@ -335,6 +357,16 @@ struct MapView: View {
             Color(hex: "A08878"),Color(hex: "C8B8A0"),Color(hex: "706860")], pixels: PA.snail)
         case .fishShadow: return SpriteSpec(tileFootprint: CGSize(width: 1, height: 1), palette: [
             Color(hex: "628BA2").opacity(0.5),Color(hex: "8FB6C8").opacity(0.4)], pixels: PA.fish, hasShadow: false)
+        case .child, .shrineMaiden, .caretaker, .fisher, .edgeTraveler, .lostBackpacker,
+                .umbrellaWoman, .doorKnocker, .mirrorMiko:
+            return SpriteSpec(tileFootprint: CGSize(width: 2, height: 2), palette: [
+                Color(hex: "C0B8A8"),Color(hex: "8D867A"),Color(hex: "2A2825"),Color(hex: "E0D8D0")], pixels: PA.rabbit)
+        case .forestSpirit, .toriiBetweenLight, .nightLamplighter:
+            return SpriteSpec(tileFootprint: CGSize(width: 1, height: 1), palette: [
+                Color(hex: "D8D8A8"),Color(hex: "F0E8C0"),Color(hex: "706860")], pixels: PA.butterfly, hasShadow: false)
+        case .truckDriver:
+            return SpriteSpec(tileFootprint: CGSize(width: 2, height: 2), palette: [
+                Color(hex: "7A624A"),Color(hex: "A08060"),Color(hex: "2A2825"),Color(hex: "E0C8B0")], pixels: PA.dog)
         case .cow: return SpriteSpec(tileFootprint: CGSize(width: 2, height: 2), palette: [
             Color(hex: "E8E0D8"),Color(hex: "3A3228"),Color(hex: "D8B898"),Color(hex: "C0B0A0")], pixels: PA.cow)
         case .sheep: return SpriteSpec(tileFootprint: CGSize(width: 2, height: 2), palette: [

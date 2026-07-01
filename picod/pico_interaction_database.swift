@@ -81,6 +81,11 @@ final class PicoInteractionDatabase: ObservableObject {
         records.filter { $0.dayKey == dayKey }
     }
 
+    func resetAll() {
+        records = []
+        try? FileManager.default.removeItem(at: fileURL)
+    }
+
     private func dayKey(for date: Date, timezoneIdentifier: String) -> String {
         var calendar = Calendar.current
         if let tz = TimeZone(identifier: timezoneIdentifier) {

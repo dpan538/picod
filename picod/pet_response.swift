@@ -11,6 +11,14 @@ struct PetResponseGenerator {
     static func response(
         for state: PetState,
         weather: WeatherCondition,
+        languageCode: String
+    ) -> String {
+        response(for: state, weather: weather, personality: .natural, languageCode: languageCode)
+    }
+
+    static func response(
+        for state: PetState,
+        weather: WeatherCondition,
         personality: PicoPersonality,
         languageCode: String
     ) -> String {
@@ -160,7 +168,7 @@ struct PetResponseGenerator {
                 : "I wandered a lot today. I am getting sleepy."
         }
 
-        if weather == .clear && state.mood == .happy {
+        if weather == .sunny && state.mood == .happy {
             switch personality {
             case .natural:
                 return languageCode == "zh" ? "天很清，我闻得到草地在变暖。" : "The sky is clear and I can smell the meadow warming."
