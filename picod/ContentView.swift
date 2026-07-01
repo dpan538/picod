@@ -141,11 +141,15 @@ struct ContentView: View {
             }
             .offset(x: showLineage ? UIScreen.main.bounds.width : 0)
 
-            PicoLineageView(
+            PicodSideStoryPanelView(
+                progress: progressStore.currentRecord,
+                beatIds: activeStoryBeatIds,
+                generationId: currentGenerationId,
+                snapshots: photoSnapshotDatabase.snapshots,
+                accentHex: latestMapTintHex.isEmpty ? nil : latestMapTintHex,
+                languageCode: languageCode,
                 onDismiss: {
-                    withAnimation(.easeInOut(duration: 0.35)) {
-                        showLineage = false
-                    }
+                    closeSideStoryPanel()
                 }
             )
             .frame(width: UIScreen.main.bounds.width)
@@ -587,7 +591,7 @@ struct ContentView: View {
 
     private func refreshStorySchedule(for progress: PicodProgressRecord, now: Date) {
         guard hasEverCaptured || progress.participationState == .captured else {
-            activeStoryBeatIds = progress.firedStoryBeatIds
+            activeStoryBeatIds = allStoryBeatIds()
             return
         }
 
@@ -607,7 +611,13 @@ struct ContentView: View {
                 beatIds: result.scheduledBeatIds
             )
         }
-        activeStoryBeatIds = (progress.firedStoryBeatIds + result.scheduledBeatIds).sorted()
+        activeStoryBeatIds = allStoryBeatIds()
+    }
+
+    private func allStoryBeatIds() -> [String] {
+        progressStore.records
+            .flatMap(\.firedStoryBeatIds)
+            .sorted()
     }
 
     private func cameraStatusLine() -> String {
@@ -947,6 +957,7 @@ struct ContentView: View {
     }
 
     private func handleLineageSwipe(_ value: DragGesture.Value) {
+        guard DevTestMode.enableStorySidePanel else { return }
         guard appState == .picoAlive else { return }
         let velocityX = estimatedVelocityX(for: value)
 
@@ -955,9 +966,13 @@ struct ContentView: View {
                 showLineage = true
             }
         } else if value.translation.width < -40, velocityX < -300, showLineage {
-            withAnimation(.easeInOut(duration: 0.35)) {
-                showLineage = false
-            }
+            closeSideStoryPanel()
+        }
+    }
+
+    private func closeSideStoryPanel() {
+        withAnimation(.easeInOut(duration: 0.35)) {
+            showLineage = false
         }
     }
 

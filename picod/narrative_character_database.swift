@@ -1,6 +1,13 @@
 import Foundation
 
 enum NarrativeCharacterKind: String, CaseIterable, Codable {
+    case nightLamplighter
+    case lostBackpacker
+    case umbrellaWoman
+    case toriiBetweenLight
+    case doorKnocker
+    case mirrorMiko
+
     case reverseWalker
     case paperEffigy
     case midnightFortuneKeeper
@@ -45,6 +52,13 @@ struct NarrativeCharacterProfile: Codable, Hashable {
 
 enum NarrativeCharacterDatabase {
     static let profiles: [NarrativeCharacterKind: NarrativeCharacterProfile] = [
+        .nightLamplighter: .init(kind: .nightLamplighter, titleZH: "点灯人", titleEN: "Night Lamplighter", storyFilePath: "storylines/night_lamplighter.md", activeWindows: ["dusk_or_night"], tags: ["first_batch", "ritual", "lantern"]),
+        .lostBackpacker: .init(kind: .lostBackpacker, titleZH: "迷路背包客", titleEN: "Lost Backpacker", storyFilePath: "storylines/lost_backpacker.md", activeWindows: ["cycle2"], tags: ["first_batch", "outside", "edge"]),
+        .umbrellaWoman: .init(kind: .umbrellaWoman, titleZH: "伞女", titleEN: "Umbrella Woman", storyFilePath: "storylines/umbrella_woman.md", activeWindows: ["rain_or_fog"], tags: ["first_batch", "weather", "watcher"]),
+        .toriiBetweenLight: .init(kind: .toriiBetweenLight, titleZH: "鸟居之间的光", titleEN: "Light Between Torii", storyFilePath: "storylines/torii_between_light.md", activeWindows: ["torii_depth"], tags: ["first_batch", "torii", "cycle"]),
+        .doorKnocker: .init(kind: .doorKnocker, titleZH: "敲门者", titleEN: "Door Knocker", storyFilePath: "storylines/door_knocker.md", activeWindows: ["day4_evening"], tags: ["first_batch", "repetition", "threshold"]),
+        .mirrorMiko: .init(kind: .mirrorMiko, titleZH: "镜中巫女", titleEN: "Mirror Miko", storyFilePath: "storylines/mirror_miko.md", activeWindows: ["reflection"], tags: ["first_batch", "miko", "identity"]),
+
         .reverseWalker: .init(kind: .reverseWalker, titleZH: "倒着走的人", titleEN: "Reverse Walker", storyFilePath: "storylines/characters/reverse_walker.md", activeWindows: ["night", "fog"], tags: ["chinese_folklore", "anomaly"]),
         .paperEffigy: .init(kind: .paperEffigy, titleZH: "纸人", titleEN: "Paper Effigy", storyFilePath: "storylines/characters/paper_effigy.md", activeWindows: ["rain"], tags: ["chinese_folklore", "rain_only"]),
         .midnightFortuneKeeper: .init(kind: .midnightFortuneKeeper, titleZH: "午夜算命摊", titleEN: "Midnight Fortune Keeper", storyFilePath: "storylines/characters/midnight_fortune_keeper.md", activeWindows: ["night"], tags: ["chinese_folklore", "stall"]),
@@ -84,6 +98,30 @@ enum NarrativeCharacterDatabase {
 
     private static func linePool(for kind: NarrativeCharacterKind, isZH: Bool, channel: NarrativeDialogueChannel) -> [String] {
         switch kind {
+        case .nightLamplighter:
+            return isZH
+                ? ["我只看见他的背影，然后下一盏灯亮了。", "今晚亮起的灯少了一盏，路像变长了。", "他没有回头，只把夜晚一点点点亮。"]
+                : ["I only saw his back, then the next lamp turned warm.", "Tonight one fewer lamp came on, and the path felt longer.", "He did not turn around; he only lit the night in small pieces."]
+        case .lostBackpacker:
+            return isZH
+                ? ["他展开地图，可地图上没有这里。", "他绕过同一个路口很多次，像每次都第一次来到。", "他的背包看起来来自外面，但外面没有入口。"]
+                : ["He unfolded a map, but nothing on it matched this place.", "He circled the same crossing many times, as if arriving for the first time each time.", "His backpack looked like it came from outside, but there was no outside gate."]
+        case .umbrellaWoman:
+            return isZH
+                ? ["雾里有人撑着伞站在边缘，我不确定她是不是一直在那里。", "伞没有移动，但我觉得被看见了。", "雨声很轻，她比雨声还安静。"]
+                : ["In the mist, someone stood at the edge with an umbrella; I could not tell if she had always been there.", "The umbrella did not move, but I felt seen.", "The rain was quiet, and she was quieter than rain."]
+        case .toriiBetweenLight:
+            return isZH
+                ? ["鸟居之间有一小块光停住了，像那里被谁占着。", "今晚鸟居之间的空气没有合上。", "那道光不像灯，更像时间露出的一点缝。"]
+                : ["Between the torii, a small light held still, as if the space was occupied.", "Tonight the air between the gates did not close.", "The light felt less like a lamp than a seam in time."]
+        case .doorKnocker:
+            return isZH
+                ? ["有人又敲门了。没有人开。", "敲门声来了三下，然后周围都安静了。", "我路过时那扇门像刚刚听完什么。"]
+                : ["Someone knocked again. No one opened.", "The knocking came in threes, then everything around it went quiet.", "When I passed, the door seemed to have just heard something."]
+        case .mirrorMiko:
+            return isZH
+                ? ["她的倒影慢了一拍。", "我看了两次，水面并不同意她的脚步。", "真实的巫女已经离开，倒影还停了一小会儿。"]
+                : ["Her reflection moved a beat late.", "I looked twice; the water did not agree with her steps.", "The real miko had already left, but the reflection stayed a moment longer."]
         case .reverseWalker:
             return isZH
                 ? ["他明明向前走，却一直看着来时的路。", "他倒着穿过路口，像在把时间往回推。", "我看了很久，还是分不清他是在离开还是回来。"]

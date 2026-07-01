@@ -36,6 +36,7 @@ enum DevTestMode {
     static let showMockSeed = false
     static let runPhotoPipelineMockValidation = false
     static let showPhotoPipelineDebug = false
+    static let enableStorySidePanel = true
 
     // Optional keyframe review state: switch among .morning / .afternoon / .dusk / .night.
     // Set to nil to follow the live system clock.

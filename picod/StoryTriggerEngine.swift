@@ -51,6 +51,8 @@ struct StoryTriggerEngine {
         switch window {
         case "any":
             return true
+        case "dusk_or_night":
+            return context.timePhase == .dusk || context.timePhase == .night
         case "day":
             return context.timePhase == .morning || context.timePhase == .afternoon
         case "dusk":
@@ -65,6 +67,16 @@ struct StoryTriggerEngine {
             return context.weatherCondition == .rain || context.weatherCondition == .storm
         case "fog":
             return context.weatherCondition == .fog
+        case "rain_or_fog":
+            return context.weatherCondition == .rain || context.weatherCondition == .storm || context.weatherCondition == .fog
+        case "cycle2":
+            return context.progress.cycleIndex >= 2
+        case "day4_evening":
+            return context.progress.dayInCycle >= 4 && (context.timePhase == .dusk || context.timePhase == .night)
+        case "torii_depth":
+            return context.progress.cycleIndex >= 2
+        case "reflection":
+            return context.progress.interactionRecordCount > 0 || context.progress.cycleIndex >= 2
         case "water":
             return context.progress.worldSeedGenerationId != nil
         case "forest":
