@@ -47,8 +47,9 @@ final class PicoInteractionDatabase: ObservableObject {
         load()
     }
 
-    func record(event: PetEvent, timezoneIdentifier: String) {
-        guard event.type != .tappedByUser else { return }
+    @discardableResult
+    func record(event: PetEvent, timezoneIdentifier: String) -> Bool {
+        guard event.type != .tappedByUser else { return false }
 
         let day = dayKey(for: event.timestamp, timezoneIdentifier: timezoneIdentifier)
         let candidate = PicoInteractionRecord(
@@ -67,7 +68,7 @@ final class PicoInteractionDatabase: ObservableObject {
            last.sourceProp == candidate.sourceProp,
            last.sourcePlace == candidate.sourcePlace,
            abs(last.timestamp.timeIntervalSince(candidate.timestamp)) < 10 {
-            return
+            return false
         }
 
         records.append(candidate)
@@ -75,6 +76,7 @@ final class PicoInteractionDatabase: ObservableObject {
             records.removeFirst(records.count - 6000)
         }
         save()
+        return true
     }
 
     func records(forDay dayKey: String) -> [PicoInteractionRecord] {
@@ -87,12 +89,7 @@ final class PicoInteractionDatabase: ObservableObject {
     }
 
     private func dayKey(for date: Date, timezoneIdentifier: String) -> String {
-        var calendar = Calendar.current
-        if let tz = TimeZone(identifier: timezoneIdentifier) {
-            calendar.timeZone = tz
-        }
-        let comps = calendar.dateComponents([.year, .month, .day], from: date)
-        return "\(comps.year ?? 0)-\(comps.month ?? 0)-\(comps.day ?? 0)"
+        PicodCalendar.dayKey(for: date, timezoneIdentifier: timezoneIdentifier)
     }
 
     private func load() {

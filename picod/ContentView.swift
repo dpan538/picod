@@ -15,6 +15,7 @@ struct ContentView: View {
     @StateObject private var cameraManager = CameraManager()
     @StateObject private var photoSnapshotDatabase = PhotoTraitSnapshotDatabase()
     @StateObject private var worldSeedDatabase = WorldSeedDatabase()
+    @StateObject private var progressStore = PicodProgressStore()
     @State private var runtimeWorldContext: WorldGenerationContext = DevTestMode.worldGenerationContext
     @State private var runtimeDevMap: TestMap = TestMapFactory.devMap(context: DevTestMode.worldGenerationContext)
 
@@ -533,12 +534,20 @@ struct ContentView: View {
             if dailyPhotoResetToken.isEmpty {
                 dailyPhotoResetToken = resetToken
             } else if resetToken != dailyPhotoResetToken {
+                let progress = syncProgressForCurrentDay(now: now)
+                currentGenerationId = progress.generationId
+                dayCount = progress.absoluteDayIndex
                 hasPhotoToday = false
                 dailyPhotoResetToken = resetToken
                 appStateRaw = AppState.empty.rawValue
                 logEntries = []
                 petStatusText = ""
                 worldSimulation.stop()
+            } else {
+                let progress = syncProgressForCurrentDay(now: now)
+                if dayCount != progress.absoluteDayIndex {
+                    dayCount = progress.absoluteDayIndex
+                }
             }
         }
 
@@ -551,13 +560,27 @@ struct ContentView: View {
     }
 
     private func resetTokenFor4AM(now: Date) -> String {
-        var calendar = Calendar.current
-        if let timezone = TimeZone(identifier: worldInputService.worldInput.stable.timezoneIdentifier) {
-            calendar.timeZone = timezone
+        PicodCalendar.dayKey(
+            for: now,
+            timezoneIdentifier: worldInputService.worldInput.stable.timezoneIdentifier
+        )
+    }
+
+    @discardableResult
+    private func syncProgressForCurrentDay(now: Date) -> PicodProgressRecord {
+        let preferredGenerationId = currentGenerationId.isEmpty ? nil : currentGenerationId
+        let progress = progressStore.ensureToday(
+            now: now,
+            timezoneIdentifier: worldInputService.worldInput.stable.timezoneIdentifier,
+            preferredGenerationId: preferredGenerationId
+        )
+        if currentGenerationId != progress.generationId {
+            currentGenerationId = progress.generationId
         }
-        let shifted = calendar.date(byAdding: .hour, value: -4, to: now) ?? now
-        let comps = calendar.dateComponents([.year, .month, .day], from: shifted)
-        return "\(comps.year ?? 0)-\(comps.month ?? 0)-\(comps.day ?? 0)"
+        if dayCount != progress.absoluteDayIndex {
+            dayCount = progress.absoluteDayIndex
+        }
+        return progress
     }
 
     private func cameraStatusLine() -> String {
@@ -973,6 +996,7 @@ struct ContentView: View {
         photoSnapshotDatabase.resetAll()
         diaryDatabase.resetAll()
         interactionDatabase.resetAll()
+        progressStore.resetAll()
 
         hasEverCaptured = false
         hasPhotoToday = false
@@ -995,6 +1019,7 @@ struct ContentView: View {
         dailyPhotoResetToken = token
         lastCaptureResetToken = ""
         currentGenerationId = UUID().uuidString
+        _ = syncProgressForCurrentDay(now: Date())
     }
 
     private func requestCameraFlow() {
@@ -1034,6 +1059,13 @@ struct ContentView: View {
 
     private func bootstrapRuntimeStateFromPersistence() {
         let snapshots = photoSnapshotDatabase.snapshots
+        if currentGenerationId.isEmpty, let latestSnapshot = snapshots.last {
+            currentGenerationId = latestSnapshot.generationId
+        }
+        let progress = syncProgressForCurrentDay(now: Date())
+        currentGenerationId = progress.generationId
+        dayCount = progress.absoluteDayIndex
+
         let currentResetToken = resetTokenFor4AM(now: Date())
         if dailyPhotoResetToken.isEmpty {
             dailyPhotoResetToken = currentResetToken
@@ -1050,7 +1082,7 @@ struct ContentView: View {
             latestCompanionBackgroundHex = ""
             appStateRaw = AppState.empty.rawValue
             if currentGenerationId.isEmpty {
-                currentGenerationId = UUID().uuidString
+                currentGenerationId = progress.generationId
             }
             logEntries = []
             petStatusText = ""
@@ -1061,7 +1093,7 @@ struct ContentView: View {
         hasPhotoToday = (lastCaptureResetToken == currentResetToken)
         appStateRaw = hasPhotoToday ? AppState.picoAlive.rawValue : AppState.empty.rawValue
         if currentGenerationId.isEmpty {
-            currentGenerationId = snapshots.last?.generationId ?? UUID().uuidString
+            currentGenerationId = progress.generationId
         }
         if let latest = snapshots.last {
             latestFormId = latest.chosenFormId
@@ -1097,7 +1129,11 @@ struct ContentView: View {
     }
 
     private func processCapturedPhoto(_ image: UIImage) {
-        let (generationId, dayIndex) = resolveGenerationForCapture()
+        let progress = syncProgressForCurrentDay(now: Date())
+        let generationId = progress.generationId
+        let dayIndex = progress.dayInCycle
+        currentGenerationId = generationId
+        let calendarDayKey = progress.calendarDayKey
         let existing = photoSnapshotDatabase.snapshots(for: generationId)
         let previousGenerationFirstFormId = previousGenerationDay1FormId(before: generationId)
 
@@ -1136,6 +1172,11 @@ struct ContentView: View {
             await MainActor.run {
                 let inserted = photoSnapshotDatabase.insert(snapshot)
                 if inserted {
+                    progressStore.markCaptured(
+                        calendarDayKey: calendarDayKey,
+                        photoSnapshotDayKey: snapshot.dayKey,
+                        generationId: generationId
+                    )
                     hasPhotoToday = true
                     dailyPhotoResetToken = resetTokenFor4AM(now: Date())
                     lastCaptureResetToken = dailyPhotoResetToken
@@ -1146,7 +1187,7 @@ struct ContentView: View {
                     latestFormId = output.chosenFormId
                     latestMapTintHex = constrainedMapTintHex(from: palette) ?? ""
                     latestCompanionBackgroundHex = hexString(from: backgroundColor)
-                    dayCount = dayIndex
+                    dayCount = progress.absoluteDayIndex
                     captureFeedbackText = languageCode == "zh"
                         ? "今日形态已更新 #\(output.chosenFormId)"
                         : "form updated #\(output.chosenFormId)"
@@ -1165,6 +1206,11 @@ struct ContentView: View {
                     .sorted(by: { $0.dayIndex < $1.dayIndex })
                     .last ?? photoSnapshotDatabase.snapshots.last {
                     // Even if today's insert is rejected (e.g., duplicate dayKey), recover to latest valid snapshot.
+                    progressStore.markCaptured(
+                        calendarDayKey: calendarDayKey,
+                        photoSnapshotDayKey: latest.dayKey,
+                        generationId: generationId
+                    )
                     hasPhotoToday = true
                     dailyPhotoResetToken = resetTokenFor4AM(now: Date())
                     lastCaptureResetToken = dailyPhotoResetToken
@@ -1177,7 +1223,7 @@ struct ContentView: View {
                     if latestCompanionBackgroundHex.isEmpty {
                         latestCompanionBackgroundHex = dominantHex(from: latest.colorPalette) ?? ""
                     }
-                    dayCount = latest.dayIndex
+                    dayCount = progress.absoluteDayIndex
                     captureFeedbackText = languageCode == "zh"
                         ? "今天已拍过，保持 #\(latest.chosenFormId)"
                         : "already captured today, keeping #\(latest.chosenFormId)"
@@ -1192,27 +1238,15 @@ struct ContentView: View {
                 photoDebugOutput = output
                 latestRenderResult = render
                 appendPhotoPipelineLog(output: output, inserted: inserted)
-                rebuildWorldSeedDebug(generationId: generationId, dayKey: dayKey)
+                rebuildWorldSeedDebug(generationId: generationId, dayKey: dayKey, calendarDayKey: calendarDayKey)
             }
         }
     }
 
     private func resolveGenerationForCapture() -> (generationId: String, dayIndex: Int) {
-        var generationId = currentGenerationId
-        if generationId.isEmpty {
-            generationId = UUID().uuidString
-            currentGenerationId = generationId
-        }
-
-        var snapshots = photoSnapshotDatabase.snapshots(for: generationId)
-        if snapshots.count >= 7 {
-            generationId = UUID().uuidString
-            currentGenerationId = generationId
-            snapshots = []
-        }
-
-        let dayIndex = min(7, max(1, snapshots.count + 1))
-        return (generationId, dayIndex)
+        let progress = syncProgressForCurrentDay(now: Date())
+        currentGenerationId = progress.generationId
+        return (progress.generationId, progress.dayInCycle)
     }
 
     private func makeDayKey(generationId: String, dayIndex: Int) -> String {
@@ -1280,7 +1314,7 @@ struct ContentView: View {
         return orderedGenerationIds[idx - 1]
     }
 
-    private func rebuildWorldSeedDebug(generationId: String, dayKey: String) {
+    private func rebuildWorldSeedDebug(generationId: String, dayKey: String, calendarDayKey: String? = nil) {
         let generationSnapshots = photoSnapshotDatabase.snapshots(for: generationId)
         let participationEngine = WorldParticipationEngine(snapshotDatabase: photoSnapshotDatabase)
         let participation = participationEngine.participation(for: generationId)
@@ -1321,6 +1355,9 @@ struct ContentView: View {
             participationMultiplier: seed.participationMultiplier
         )
         worldSeedDatabase.save(finalizedSeed)
+        if let calendarDayKey {
+            progressStore.markWorldSeed(calendarDayKey: calendarDayKey, generationId: finalizedSeed.generationId)
+        }
         let mappedContext = WorldSeedMapper.toContext(seed: finalizedSeed, base: runtimeWorldContext)
         if mappedContext != runtimeWorldContext {
             runtimeWorldContext = mappedContext
@@ -1459,26 +1496,34 @@ struct ContentView: View {
 
         if repeatedText || (recentRepeat && sameZone) {
             if entryType == .interaction {
+                let timezone = worldInputService.worldInput.stable.timezoneIdentifier
                 diaryDatabase.recordInteraction(
                     from: event,
-                    timezoneIdentifier: worldInputService.worldInput.stable.timezoneIdentifier
+                    timezoneIdentifier: timezone
                 )
-                interactionDatabase.record(
+                let stored = interactionDatabase.record(
                     event: event,
-                    timezoneIdentifier: worldInputService.worldInput.stable.timezoneIdentifier
+                    timezoneIdentifier: timezone
                 )
+                if stored {
+                    progressStore.recordInteraction(calendarDayKey: PicodCalendar.dayKey(for: event.timestamp, timezoneIdentifier: timezone))
+                }
             }
             return
         }
         if entryType == .interaction {
+            let timezone = worldInputService.worldInput.stable.timezoneIdentifier
             diaryDatabase.recordInteraction(
                 from: event,
-                timezoneIdentifier: worldInputService.worldInput.stable.timezoneIdentifier
+                timezoneIdentifier: timezone
             )
-            interactionDatabase.record(
+            let stored = interactionDatabase.record(
                 event: event,
-                timezoneIdentifier: worldInputService.worldInput.stable.timezoneIdentifier
+                timezoneIdentifier: timezone
             )
+            if stored {
+                progressStore.recordInteraction(calendarDayKey: PicodCalendar.dayKey(for: event.timestamp, timezoneIdentifier: timezone))
+            }
         }
 
         logEntries.append(PetLogEntry(timestamp: timestamp, message: message, type: entryType))

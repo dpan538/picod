@@ -193,12 +193,7 @@ final class PicoDiaryDatabase: ObservableObject {
     }
 
     private func dayKey(for date: Date, timezoneIdentifier: String) -> String {
-        var calendar = Calendar.current
-        if let tz = TimeZone(identifier: timezoneIdentifier) {
-            calendar.timeZone = tz
-        }
-        let comps = calendar.dateComponents([.year, .month, .day], from: date)
-        return "\(comps.year ?? 0)-\(comps.month ?? 0)-\(comps.day ?? 0)"
+        PicodCalendar.dayKey(for: date, timezoneIdentifier: timezoneIdentifier)
     }
 
     private func storySentence(
