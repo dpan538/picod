@@ -300,3 +300,74 @@ Observed P1G evidence-copy audit:
 
 Projection rendering remains gated. Normal Memory Drawer UI receives only
 textual world trace fragments.
+
+## P1H Art Direction Review
+
+P1H reviewed screenshots/manual scenario notes for:
+
+- `freshDay1Empty`
+- `day1WarmIndoorCapture`
+- `day4RainyUmbrellaTrace`
+- `day5NightLamplighterTrace`
+- `day7MirrorClosure`
+- `completedLifeAlbum`
+- `completedCycleRecord`
+- `lowParticipationLife`
+- `lockedEraMemory`
+- `unlockedEraMemory`
+
+P1H did not change audit counts:
+
+- static maps: 5
+- projection scenarios: 10
+- total errors: 0
+- total warnings: 320
+- total actions: 320
+- high actions: 55
+
+Evidence integrity remained clean:
+
+- evidence-link unresolved links: 0
+- duplicate anchors: 0
+- locked leaks: 0
+- missing evidence: 0
+- evidence-copy failures: 0
+
+P1H art-direction result:
+
+- Normal mode has no projection/debug badge.
+- Projection rendering remains gated.
+- `MapView` still does not read memory stores directly.
+- Memory Drawer world trace copy is production-safe for P1H.
+- Story copy stays subtle and avoids lore dumps.
+- Locked EraMemory does not leak.
+- Low participation reads quiet rather than punitive.
+
+Top 10 P1I candidates after P1H:
+
+1. Reduce `forestShrine` spawn occlusion risk around `x10 y22`.
+2. Reduce `forestShrine` route occlusion around `x17 y21` and `x18 y25`.
+3. Reduce `wetlandLantern` spawn occlusion near `x4 y24`, `x5 y21`, and `x8 y22`.
+4. Reduce `wetlandLantern` route occlusion near `x4 y24` and `x10 y24`.
+5. Reduce `nightGrove` route occlusion near `x12 y24`, `x8 y20`, and `x6 y21`.
+6. Reduce `villageMarket` spawn/route occlusion around `x7 y21`, `x6 y23`, and `x12 y17`.
+7. Reduce `aprilDense` spawn/route occlusion around `x10 y22` and `x12 y19`.
+8. Densify sparse perimeter forest only outside protected Pico route bands.
+9. Add approach tiles for disconnected structures where they improve map belonging.
+10. Tune wetland projected animal/visitor habitat placement.
+
+Production projection remains blocked by visual warning backlog, not by data
+integrity:
+
+- Route/spawn visual occlusion warnings must be reduced before projection
+  rendering becomes a normal-user path.
+- Wetland habitat placement needs tuning before rainy story echoes feel fully
+  grounded.
+- DEBUG preview UI is useful but not art-review polished on small screens.
+
+Safe to defer:
+
+- Minor terrain mismatch warnings under decorative props.
+- Non-critical decorative grounding issues.
+- Perimeter density changes that could crowd Pico routes.
+- Copy polish suggestions that are not raw-term leaks.
