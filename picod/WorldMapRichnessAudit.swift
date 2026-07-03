@@ -108,6 +108,7 @@ struct WorldProjectionAuditScenarioReport: Identifiable, Codable, Hashable {
 struct WorldMapRichnessAuditReport: Codable, Hashable {
     let variantReports: [WorldMapRichnessVariantReport]
     var projectionReports: [WorldProjectionAuditScenarioReport] = []
+    var evidenceLinkAudit: WorldEvidenceLinkAuditReport = .empty
 
     var mapCount: Int {
         variantReports.count
@@ -195,6 +196,15 @@ struct WorldMapRichnessAuditReport: Codable, Hashable {
                 lines.append("  + \(report.actions.count - 4) more projection action(s)")
             }
         }
+        if evidenceLinkAudit.scenarioCount > 0 {
+            lines.append(evidenceLinkAudit.summaryLine)
+            for report in evidenceLinkAudit.scenarioReports.prefix(6) {
+                lines.append("  \(report.summaryLine)")
+            }
+            if evidenceLinkAudit.scenarioReports.count > 6 {
+                lines.append("  + \(evidenceLinkAudit.scenarioReports.count - 6) more evidence scenario(s)")
+            }
+        }
         lines.append("top 10 priority fixes")
         for action in topActions.prefix(10) {
             lines.append("  \(action.compactLine)")
@@ -213,7 +223,11 @@ enum WorldMapRichnessAuditor {
         let projectionReports = WorldProjectionAuditScenarioID.allCases.map { scenario in
             auditProjection(scenario: scenario, context: context)
         }
-        return WorldMapRichnessAuditReport(variantReports: reports, projectionReports: projectionReports)
+        return WorldMapRichnessAuditReport(
+            variantReports: reports,
+            projectionReports: projectionReports,
+            evidenceLinkAudit: WorldEvidenceLinkAuditor.auditDebugScenarios(context: context)
+        )
     }
 
     static func printAudit(

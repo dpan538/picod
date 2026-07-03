@@ -246,3 +246,32 @@ Observed result:
 - P1B baseline: `static maps 5 / projection scenarios 10 / errors 26 / warnings 366 / actions 392 / high 113`
 - P1C current: `static maps 5 / projection scenarios 10 / errors 0 / warnings 320 / actions 320 / high 55`
 - P1D current: `static maps 5 / projection scenarios 10 / errors 0 / warnings 320 / actions 320 / high 55`
+- P1F current: `static maps 5 / projection scenarios 10 / errors 0 / warnings 320 / actions 320 / high 55`
+
+## P1F Evidence Link Audit
+
+P1F adds an evidence-link audit on top of the existing world richness audit. It
+does not change the static or projection baseline counts.
+
+Evidence-link checks:
+
+- Memory Drawer records can resolve soft world trace links from projected
+  element evidence.
+- StoryCard anchors require story/map trace evidence.
+- Cycle marker anchors require cycle evidence.
+- Locked EraMemory scenarios do not produce visible era anchors.
+- Unlocked EraMemory scenarios can produce remembered rare echo anchors.
+- Duplicate anchors are reported instead of ignored.
+- Missing projection data falls back to user-facing trace text without crash.
+
+Observed P1F evidence-link audit:
+
+- scenarios: 10
+- anchors: 35
+- unresolved links: 0
+- duplicate anchors: 0
+- locked leaks: 0
+- missing evidence: 0
+
+The remaining 320 warnings / 55 high actions are still the P1 world backlog,
+not evidence-link failures.

@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ObjectGalleryDebugView: View {
     @State private var selectedProjectionScenario: WorldProjectionDebugScenarioID = .day1WarmIndoorCapture
+    @State private var selectedEvidenceAnchorID: String?
 
     private let columns = [
         GridItem(.flexible(), spacing: 12),
@@ -22,7 +23,8 @@ struct ObjectGalleryDebugView: View {
 
             WorldProjectionPreviewDebugView(
                 reports: projectionPreviewReports,
-                selectedID: $selectedProjectionScenario
+                selectedID: $selectedProjectionScenario,
+                selectedAnchorID: $selectedEvidenceAnchorID
             )
             .padding(.horizontal, 12)
             .padding(.top, 8)
@@ -68,9 +70,22 @@ struct ObjectGalleryDebugView: View {
 private struct WorldProjectionPreviewDebugView: View {
     let reports: [WorldProjectionDebugScenarioReport]
     @Binding var selectedID: WorldProjectionDebugScenarioID
+    @Binding var selectedAnchorID: String?
 
     private var selectedReport: WorldProjectionDebugScenarioReport {
         reports.first { $0.id == selectedID } ?? reports[0]
+    }
+
+    private var anchors: [WorldEvidenceAnchor] {
+        WorldEvidenceAnchorResolver().resolveAnchors(projection: selectedReport.projection)
+    }
+
+    private var selectedAnchor: WorldEvidenceAnchor? {
+        if let selectedAnchorID,
+           let anchor = anchors.first(where: { $0.id == selectedAnchorID }) {
+            return anchor
+        }
+        return anchors.first
     }
 
     private let metricColumns = [
@@ -111,8 +126,11 @@ private struct WorldProjectionPreviewDebugView: View {
             .pickerStyle(.menu)
             .font(PicodFont.mono(10))
             .tint(Color.picod_ink)
+            .onChange(of: selectedID) { _, _ in
+                selectedAnchorID = nil
+            }
 
-            WorldProjectionRenderedPreview(report: report)
+            WorldProjectionRenderedPreview(report: report, selectedAnchor: selectedAnchor)
                 .frame(height: 260)
                 .background(Color(hex: "D8DDCA"))
                 .overlay(Rectangle().stroke(Color.picod_ink.opacity(0.22), lineWidth: 1))
@@ -174,6 +192,38 @@ private struct WorldProjectionPreviewDebugView: View {
                 }
             }
 
+            if anchors.isEmpty {
+                Text("No evidence anchors resolved for this projection.")
+                    .font(PicodFont.mono(9))
+                    .foregroundStyle(Color.picod_ink2)
+            } else {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("EVIDENCE ANCHORS")
+                        .font(PicodFont.monoBold(9))
+                        .foregroundStyle(Color.picod_ink)
+                    ForEach(anchors.prefix(8)) { anchor in
+                        Button {
+                            selectedAnchorID = anchor.id
+                        } label: {
+                            WorldEvidenceAnchorRow(
+                                anchor: anchor,
+                                isSelected: selectedAnchorID == anchor.id || (selectedAnchorID == nil && anchor.id == anchors.first?.id)
+                            )
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    if anchors.count > 8 {
+                        Text("+ \(anchors.count - 8) more")
+                            .font(PicodFont.mono(8))
+                            .foregroundStyle(Color.picod_ink2.opacity(0.72))
+                    }
+                }
+            }
+
+            if let selectedAnchor {
+                WorldEvidenceAnchorDebugCard(anchor: selectedAnchor)
+            }
+
             if !report.actions.isEmpty {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("WARNINGS / ACTIONS")
@@ -199,6 +249,7 @@ private struct WorldProjectionPreviewDebugView: View {
 
 private struct WorldProjectionRenderedPreview: View {
     let report: WorldProjectionDebugScenarioReport
+    let selectedAnchor: WorldEvidenceAnchor?
 
     var body: some View {
         ZStack {
@@ -214,7 +265,7 @@ private struct WorldProjectionRenderedPreview: View {
                 animateAmbient: false
             )
 
-            WorldProjectionMarkerOverlay(report: report)
+            WorldProjectionMarkerOverlay(report: report, selectedAnchor: selectedAnchor)
                 .allowsHitTesting(false)
         }
         .clipped()
@@ -238,6 +289,7 @@ private struct WorldProjectionRenderedPreview: View {
 
 private struct WorldProjectionMarkerOverlay: View {
     let report: WorldProjectionDebugScenarioReport
+    let selectedAnchor: WorldEvidenceAnchor?
 
     var body: some View {
         Canvas { ctx, size in
@@ -267,6 +319,20 @@ private struct WorldProjectionMarkerOverlay: View {
                 let path = Path(ellipseIn: rect)
                 ctx.fill(path, with: .color(markerColor(for: element).opacity(0.76)))
                 ctx.stroke(path, with: .color(Color.picod_ink.opacity(0.7)), lineWidth: max(1, tile * 0.06))
+                if selectedAnchor?.projectedElementID == element.id {
+                    let highlightRadius = radius + max(4, tile * 0.22)
+                    let highlightRect = CGRect(
+                        x: point.x - highlightRadius,
+                        y: point.y - highlightRadius,
+                        width: highlightRadius * 2,
+                        height: highlightRadius * 2
+                    )
+                    ctx.stroke(
+                        Path(ellipseIn: highlightRect),
+                        with: .color(Color.picod_paper.opacity(0.96)),
+                        style: StrokeStyle(lineWidth: max(2, tile * 0.12), dash: [tile * 0.28, tile * 0.14])
+                    )
+                }
             }
         }
     }
@@ -356,6 +422,10 @@ private struct WorldRichnessAuditDebugPanel: View {
                 }
             }
 
+            if audit.evidenceLinkAudit.scenarioCount > 0 {
+                WorldEvidenceAuditDebugPanel(report: audit.evidenceLinkAudit)
+            }
+
             if let firstProjection = audit.projectionReports.first(where: { !$0.projection.allElements.isEmpty }) {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("PROJECTED ELEMENTS")
@@ -386,6 +456,115 @@ private struct WorldRichnessAuditDebugPanel: View {
         .padding(12)
         .background(Color.picod_paper)
         .overlay(Rectangle().stroke(Color.picod_ink.opacity(0.24), lineWidth: 1))
+    }
+}
+
+private struct WorldEvidenceAuditDebugPanel: View {
+    let report: WorldEvidenceLinkAuditReport
+
+    private let columns = [
+        GridItem(.flexible(), spacing: 6),
+        GridItem(.flexible(), spacing: 6),
+        GridItem(.flexible(), spacing: 6)
+    ]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("EVIDENCE LINKS")
+                .font(PicodFont.monoBold(9))
+                .foregroundStyle(Color.picod_ink)
+
+            LazyVGrid(columns: columns, spacing: 6) {
+                WorldValidationMetric(title: "SCENARIOS", value: "\(report.scenarioCount)")
+                WorldValidationMetric(title: "ANCHORS", value: "\(report.anchorCount)")
+                WorldValidationMetric(title: "UNRESOLVED", value: "\(report.unresolvedLinkCount)")
+                WorldValidationMetric(title: "DUPES", value: "\(report.duplicateAnchorCount)")
+                WorldValidationMetric(title: "LOCKED", value: "\(report.lockedLeakCount)")
+                WorldValidationMetric(title: "MISSING", value: "\(report.missingEvidenceCount)")
+            }
+
+            ForEach(report.scenarioReports.prefix(5)) { scenario in
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(scenario.id)
+                        .font(PicodFont.monoBold(8))
+                        .foregroundStyle(Color.picod_ink)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.62)
+                    Spacer(minLength: 4)
+                    Text("a\(scenario.anchorCount) s\(scenario.storyAnchorCount) c\(scenario.cycleAnchorCount) e\(scenario.eraAnchorCount)")
+                        .font(PicodFont.mono(8))
+                        .foregroundStyle(scenario.lockedLeakCount > 0 || scenario.missingEvidenceCount > 0 ? Color(hex: "9A4B3A") : Color.picod_ink2)
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 5)
+                .background(Color.picod_paper2.opacity(0.34))
+                .overlay(Rectangle().stroke(Color.picod_ink.opacity(0.12), lineWidth: 1))
+            }
+        }
+    }
+}
+
+private struct WorldEvidenceAnchorRow: View {
+    let anchor: WorldEvidenceAnchor
+    let isSelected: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Text(anchor.anchorKind.rawValue.uppercased())
+                    .font(PicodFont.monoBold(8))
+                    .foregroundStyle(Color.picod_ink)
+                Text(anchor.evidenceSourceType.rawValue)
+                    .font(PicodFont.mono(8))
+                    .foregroundStyle(Color.picod_ink2)
+                Spacer(minLength: 4)
+                if let point = anchor.anchorPoint {
+                    Text("x\(point.x) y\(point.y)")
+                        .font(PicodFont.mono(8))
+                        .foregroundStyle(Color.picod_ink2)
+                }
+            }
+            Text(anchor.userFacingLabel)
+                .font(PicodFont.mono(8))
+                .foregroundStyle(Color.picod_ink2)
+                .fixedSize(horizontal: false, vertical: true)
+            Text(anchor.validationState.rawValue)
+                .font(PicodFont.mono(8))
+                .foregroundStyle(anchor.validationState == .valid ? Color.picod_ink2.opacity(0.72) : Color(hex: "9A4B3A"))
+        }
+        .padding(6)
+        .background(isSelected ? Color.picod_ink.opacity(0.08) : Color.picod_paper2.opacity(0.34))
+        .overlay(Rectangle().stroke(isSelected ? Color.picod_ink.opacity(0.5) : Color.picod_ink.opacity(0.12), lineWidth: 1))
+    }
+}
+
+private struct WorldEvidenceAnchorDebugCard: View {
+    let anchor: WorldEvidenceAnchor
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("SELECTED ANCHOR")
+                .font(PicodFont.monoBold(9))
+                .foregroundStyle(Color.picod_ink)
+            Text(anchor.id)
+                .font(PicodFont.mono(8))
+                .foregroundStyle(Color.picod_ink2)
+                .lineLimit(2)
+            Text("source \(anchor.evidenceSourceType.rawValue) · state \(anchor.displayState.rawValue) · \(anchor.persistenceScope.rawValue)")
+                .font(PicodFont.mono(8))
+                .foregroundStyle(Color.picod_ink2)
+            Text("evidence \(anchor.evidenceID)")
+                .font(PicodFont.mono(8))
+                .foregroundStyle(Color.picod_ink2.opacity(0.78))
+                .lineLimit(2)
+            Text(anchor.debugReason)
+                .font(PicodFont.mono(8))
+                .foregroundStyle(Color.picod_ink2.opacity(0.78))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(8)
+        .background(Color.picod_paper2.opacity(0.34))
+        .overlay(Rectangle().stroke(Color.picod_ink.opacity(0.16), lineWidth: 1))
     }
 }
 
