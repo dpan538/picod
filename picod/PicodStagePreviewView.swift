@@ -579,9 +579,26 @@ struct PicodSideStoryPanelView: View {
 
     private func dailyRecordDetail(_ record: DailyLifeRecord?, day: Int) -> String {
         guard let record else {
+            let worldTrace = PicodWorldTraceText.dailyTraceLine(
+                for: nil,
+                anchors: [],
+                didCapturePhoto: false,
+                mapMood: nil,
+                languageCode: languageCode
+            )
             return languageCode == "zh"
-                ? "第 \(day) 天还在等待一张照片。"
-                : "Day \(day) is still waiting for one photo."
+                ? """
+                第 \(day) 天还在等待一张照片。
+
+                世界痕迹：
+                \(worldTrace)
+                """
+                : """
+                Day \(day) is still waiting for one photo.
+
+                World trace:
+                \(worldTrace)
+                """
         }
         let capture = record.didCapturePhoto
             ? (languageCode == "zh" ? "已保存照片" : "photo saved")
@@ -592,8 +609,13 @@ struct PicodSideStoryPanelView: View {
         let mood = PicodDiaryTextBridge.moodLabel(record.mapMood ?? "quiet", languageCode: languageCode)
         let diary = PicodDiaryTextBridge.fragment(for: record, languageCode: languageCode)
         let story = storyEvidenceLines(for: record)
-        let worldTrace = worldTraceText(
-            WorldEvidenceAnchorResolver().linkDailyRecord(record, anchors: worldEvidenceAnchors)
+        let dailyLink = WorldEvidenceAnchorResolver().linkDailyRecord(record, anchors: worldEvidenceAnchors)
+        let worldTrace = PicodWorldTraceText.dailyTraceLine(
+            for: dailyLink,
+            anchors: worldEvidenceAnchors,
+            didCapturePhoto: record.didCapturePhoto,
+            mapMood: record.mapMood,
+            languageCode: languageCode
         )
 
         if languageCode == "zh" {
@@ -637,8 +659,12 @@ struct PicodSideStoryPanelView: View {
             ? (languageCode == "zh" ? "没有明显故事卡" : "no clear story card yet")
             : "\(album.unlockedStoryCardIDs.count) " + (languageCode == "zh" ? "条故事痕迹" : "story trace(s)")
         let rhythm = PicodDiaryTextBridge.lifeRhythm(for: album, languageCode: languageCode)
-        let worldTrace = worldTraceText(
-            WorldEvidenceAnchorResolver().linkLifeAlbum(album, anchors: worldEvidenceAnchors)
+        let albumLink = WorldEvidenceAnchorResolver().linkLifeAlbum(album, anchors: worldEvidenceAnchors)
+        let worldTrace = PicodWorldTraceText.lifeAlbumTraceLine(
+            for: albumLink,
+            anchors: worldEvidenceAnchors,
+            capturedDays: captured,
+            languageCode: languageCode
         )
 
         if languageCode == "zh" {
@@ -710,15 +736,20 @@ struct PicodSideStoryPanelView: View {
     private func storyCardDetail(_ card: StoryCard) -> String {
         let records = evidenceRecords(for: card)
         let firstSeen = card.firstSeenAt.map { PicodDiaryTextBridge.shortDate($0, languageCode: languageCode) }
-            ?? (records.first.map { "Day \($0.dayIndexInLife.rawValue)" } ?? (languageCode == "zh" ? "尚未清楚" : "not clear yet"))
+            ?? (records.first.map { dayLabel($0.dayIndexInLife.rawValue) } ?? (languageCode == "zh" ? "尚未清楚" : "not clear yet"))
         let lastSeen = card.lastSeenAt.map { PicodDiaryTextBridge.shortDate($0, languageCode: languageCode) }
-            ?? (records.last.map { "Day \($0.dayIndexInLife.rawValue)" } ?? (languageCode == "zh" ? "尚未清楚" : "not clear yet"))
+            ?? (records.last.map { dayLabel($0.dayIndexInLife.rawValue) } ?? (languageCode == "zh" ? "尚未清楚" : "not clear yet"))
         let evidence = records.prefix(3).map { PicodDiaryTextBridge.evidenceLine(for: $0, languageCode: languageCode) }
         let evidenceText = evidence.isEmpty
             ? (languageCode == "zh" ? "还没有足够清楚的证据。" : "No clear evidence has gathered yet.")
             : evidence.joined(separator: "\n\n")
-        let worldTrace = worldTraceText(
-            WorldEvidenceAnchorResolver().linkStoryCard(card, anchors: worldEvidenceAnchors)
+        let storyLink = WorldEvidenceAnchorResolver().linkStoryCard(card, anchors: worldEvidenceAnchors)
+        let worldTrace = PicodWorldTraceText.storyEvidenceLine(
+            for: storyLink,
+            anchors: worldEvidenceAnchors,
+            displayState: card.displayState,
+            recurrenceCount: card.recurrenceCount,
+            languageCode: languageCode
         )
 
         if languageCode == "zh" {
@@ -765,8 +796,12 @@ struct PicodSideStoryPanelView: View {
         let participation = record.participationPattern.isEmpty
             ? (languageCode == "zh" ? "安静的一周" : "quiet week")
             : record.participationPattern.prefix(7).joined(separator: ", ")
-        let worldTrace = worldTraceText(
-            WorldEvidenceAnchorResolver().linkCycleRecord(record, anchors: worldEvidenceAnchors)
+        let cycleLink = WorldEvidenceAnchorResolver().linkCycleRecord(record, anchors: worldEvidenceAnchors)
+        let worldTrace = PicodWorldTraceText.cycleTraceLine(
+            for: cycleLink,
+            anchors: worldEvidenceAnchors,
+            toriiCount: record.toriiCount,
+            languageCode: languageCode
         )
         if languageCode == "zh" {
             return """
@@ -805,8 +840,12 @@ struct PicodSideStoryPanelView: View {
     private func eraMemoryDetail(_ memory: EraMemory) -> String {
         let range = "\(PicodDiaryTextBridge.shortDate(memory.startedAt, languageCode: languageCode)) - \(PicodDiaryTextBridge.shortDate(memory.endedAt, languageCode: languageCode))"
         let echoes = memory.postResetEchoes.prefix(3).joined(separator: "\n")
-        let worldTrace = worldTraceText(
-            WorldEvidenceAnchorResolver().linkEraMemory(memory, anchors: worldEvidenceAnchors)
+        let eraLink = WorldEvidenceAnchorResolver().linkEraMemory(memory, anchors: worldEvidenceAnchors)
+        let worldTrace = PicodWorldTraceText.eraTraceLine(
+            for: eraLink,
+            anchors: worldEvidenceAnchors,
+            isUnlocked: true,
+            languageCode: languageCode
         )
         if languageCode == "zh" {
             return """
@@ -834,54 +873,15 @@ struct PicodSideStoryPanelView: View {
         """
     }
 
-    private func worldTraceText(_ link: WorldEvidenceLink) -> String {
-        let anchor = worldEvidenceAnchors.first { $0.id == link.primaryAnchorID }
-        let label = localizedWorldTraceLabel(anchor: anchor, fallback: link.fallbackLabel)
-        if languageCode == "zh" {
-            let place = link.canHighlightOnMap ? "地图能找到这处痕迹。" : "它的位置还很轻。"
-            return "\(label)\n\(place)"
-        }
-        let place = link.canHighlightOnMap ? "The map can find this trace." : "Its place is still soft."
-        return "\(label)\n\(place)"
-    }
-
-    private func localizedWorldTraceLabel(anchor: WorldEvidenceAnchor?, fallback: String) -> String {
-        guard languageCode == "zh" else {
-            return anchor?.userFacingLabel ?? fallback
-        }
-        guard let anchor else {
-            return "地图只留下了一点很轻的痕迹。"
-        }
-        if anchor.storylineID == "night_lamplighter" { return "一盏小光记住了路边。" }
-        if anchor.storylineID == "umbrella_woman" { return "雨停在了路边和水边。" }
-        if anchor.storylineID == "mirror_miko" { return "神社附近留下了一点倒影。" }
-        switch anchor.anchorKind {
-        case .cycleMarker:
-            return "一个世界标记记住了这个周期。"
-        case .eraEcho:
-            return "很久以后，有一点回声留下来。"
-        case .waterEdge:
-            return "水边留下了一点安静的痕迹。"
-        case .light:
-            return "小光在路边停了一会儿。"
-        case .shrine:
-            return "神社旁边有一点没说出口的东西。"
-        case .path:
-            return "今天的痕迹落在路边。"
-        case .animal:
-            return "有个小访客记住了这里。"
-        case .atmosphere:
-            return "空气里留下了今天的心情。"
-        case .object, .visitor, .unknown:
-            return "地图上留下了一点小东西。"
-        }
-    }
-
     private func storyEvidenceLines(for record: DailyLifeRecord) -> String {
         if record.storyBeatIDs.isEmpty && record.storyTraceIDs.isEmpty {
             return languageCode == "zh" ? "没有明显痕迹。" : "No clear trace."
         }
         return PicodDiaryTextBridge.evidenceLine(for: record, languageCode: languageCode)
+    }
+
+    private func dayLabel(_ day: Int) -> String {
+        languageCode == "zh" ? "第 \(day) 天" : "Day \(day)"
     }
 
     private func evidenceRecords(for card: StoryCard) -> [DailyLifeRecord] {

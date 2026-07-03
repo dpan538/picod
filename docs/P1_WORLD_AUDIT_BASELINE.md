@@ -275,3 +275,28 @@ Observed P1F evidence-link audit:
 
 The remaining 320 warnings / 55 high actions are still the P1 world backlog,
 not evidence-link failures.
+
+## P1G Evidence Copy Audit
+
+P1G adds a deterministic evidence-copy audit line to the world audit console. It
+is additive and does not change static map counts, projection scenario counts,
+warning counts, action counts, or evidence-link counts.
+
+Evidence-copy checks:
+
+- umbrella, lamplighter, and mirror story copy exists
+- DailyLifeRecord fallback copy exists
+- LifeAlbum retrospective copy exists
+- CycleRecord marker copy exists
+- locked EraMemory remains quiet
+- unlocked EraMemory shows one rare echo line
+- missing projection produces fallback copy
+- normal-user copy avoids raw debug/audit terms
+
+Observed P1G evidence-copy audit:
+
+- checked: 10
+- failed: 0
+
+Projection rendering remains gated. Normal Memory Drawer UI receives only
+textual world trace fragments.

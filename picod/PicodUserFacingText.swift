@@ -277,3 +277,460 @@ enum PicodTodayTraceText {
         return nil
     }
 }
+
+enum PicodWorldTraceText {
+    static func worldTraceLine(for anchor: WorldEvidenceAnchor, languageCode: String) -> String {
+        if languageCode == "zh" {
+            if anchor.storylineID == NarrativeCharacterKind.nightLamplighter.rawValue {
+                return "那盏灯记住了这个夜晚。"
+            }
+            if anchor.storylineID == NarrativeCharacterKind.umbrellaWoman.rawValue {
+                return "雨停在石路边。"
+            }
+            if anchor.storylineID == NarrativeCharacterKind.mirrorMiko.rawValue {
+                return "神社旁边有一点东西看了回来。"
+            }
+            switch anchor.anchorKind {
+            case .cycleMarker:
+                return "周期结束后，一个标记留了下来。"
+            case .eraEcho:
+                return "很久以后，有一点回声还在。"
+            case .waterEdge:
+                return "水边留下了一条安静的痕迹。"
+            case .light:
+                return "小光在路边多停了一会儿。"
+            case .shrine:
+                return "神社附近留下了一点没说出口的东西。"
+            case .path:
+                return "一条小痕迹落在路边。"
+            case .atmosphere:
+                return "今天的空气留在了地图里。"
+            case .object, .visitor, .animal, .unknown:
+                return "地图上留下了一点小东西。"
+            }
+        }
+
+        if anchor.storylineID == NarrativeCharacterKind.nightLamplighter.rawValue {
+            return "The lamp remembered this night."
+        }
+        if anchor.storylineID == NarrativeCharacterKind.umbrellaWoman.rawValue {
+            return "The rain stayed on the stones."
+        }
+        if anchor.storylineID == NarrativeCharacterKind.mirrorMiko.rawValue {
+            return "Something by the shrine looked back."
+        }
+        switch anchor.anchorKind {
+        case .cycleMarker:
+            return "One marker stayed after the cycle ended."
+        case .eraEcho:
+            return "A rare echo stayed after the long turn."
+        case .waterEdge:
+            return "A quiet trace stayed near the water."
+        case .light:
+            return "A small light paused by the path."
+        case .shrine:
+            return "Something unsaid stayed near the shrine."
+        case .path:
+            return "A trace was left near the path."
+        case .atmosphere:
+            return "The day's air settled into the map."
+        case .object, .visitor, .animal, .unknown:
+            return "A small thing stayed in the world."
+        }
+    }
+
+    static func dailyTraceLine(
+        for link: WorldEvidenceLink?,
+        anchors: [WorldEvidenceAnchor],
+        didCapturePhoto: Bool,
+        mapMood: String?,
+        languageCode: String
+    ) -> String {
+        let fallback: String
+        if didCapturePhoto {
+            fallback = dailyFallback(mapMood: mapMood, languageCode: languageCode)
+        } else {
+            fallback = languageCode == "zh"
+                ? "这一天很安静，地图也把空白留住了。"
+                : "This day stayed quiet, and the map kept the empty space."
+        }
+        return traceLines(
+            for: link,
+            anchors: anchors,
+            fallback: fallback,
+            languageCode: languageCode,
+            limit: 2,
+            includePlaceLine: link?.canHighlightOnMap == true
+        ).joined(separator: "\n")
+    }
+
+    static func storyEvidenceLine(
+        for link: WorldEvidenceLink,
+        languageCode: String
+    ) -> String {
+        if link.canOpenDetail {
+            return languageCode == "zh"
+                ? "有一条痕迹已经能被看见。"
+                : "One trace has become visible."
+        }
+        return languageCode == "zh"
+            ? "这条痕迹还只露出一点边。"
+            : "This trace is still only showing its edge."
+    }
+
+    static func storyEvidenceLine(
+        for link: WorldEvidenceLink,
+        anchors: [WorldEvidenceAnchor],
+        displayState: StoryCardDisplayState,
+        recurrenceCount: Int,
+        languageCode: String
+    ) -> String {
+        if displayState == .locked {
+            return languageCode == "zh"
+                ? "这条痕迹还没有走进世界。"
+                : "This trace has not stepped into the world yet."
+        }
+
+        var lines = traceLines(
+            for: link,
+            anchors: anchors,
+            fallback: languageCode == "zh"
+                ? "世界只留下了一点很轻的线索。"
+                : "The world only left a faint clue.",
+            languageCode: languageCode,
+            limit: 2,
+            includePlaceLine: false
+        )
+        if recurrenceCount > 1 && lines.count < 3 {
+            lines.append(languageCode == "zh"
+                ? "它已经不止一次靠近。"
+                : "It has returned more than once.")
+        }
+        return Array(lines.prefix(3)).joined(separator: "\n")
+    }
+
+    static func lifeAlbumTraceLine(
+        for link: WorldEvidenceLink,
+        anchors: [WorldEvidenceAnchor],
+        capturedDays: Int,
+        languageCode: String
+    ) -> String {
+        var lines = traceLines(
+            for: link,
+            anchors: anchors,
+            fallback: languageCode == "zh"
+                ? "七天的痕迹安静地放在世界里。"
+                : "A seven-day trace rests quietly in the world.",
+            languageCode: languageCode,
+            limit: 2,
+            includePlaceLine: false
+        )
+        if lines.count < 2 {
+            lines.append(languageCode == "zh"
+                ? "\(capturedDays) 天照片留下了这次生命的节奏。"
+                : "\(capturedDays) captured day(s) left this Life's rhythm.")
+        }
+        return Array(lines.prefix(2)).joined(separator: "\n")
+    }
+
+    static func cycleTraceLine(
+        for link: WorldEvidenceLink,
+        anchors: [WorldEvidenceAnchor],
+        toriiCount: Int,
+        languageCode: String
+    ) -> String {
+        let fallback = toriiCount > 0
+            ? (languageCode == "zh"
+                ? "周期结束后，一个标记留了下来。"
+                : "One marker stayed after the cycle ended.")
+            : (languageCode == "zh"
+                ? "这个周期留下了很轻的节奏。"
+                : "This cycle left a quiet rhythm.")
+        return traceLines(
+            for: link,
+            anchors: anchors,
+            fallback: fallback,
+            languageCode: languageCode,
+            limit: 2,
+            includePlaceLine: toriiCount > 0 && link.canHighlightOnMap
+        ).joined(separator: "\n")
+    }
+
+    static func eraTraceLine(
+        for link: WorldEvidenceLink?,
+        anchors: [WorldEvidenceAnchor],
+        isUnlocked: Bool,
+        languageCode: String
+    ) -> String {
+        guard isUnlocked else {
+            return languageCode == "zh" ? "还没有显现。" : "Not visible yet."
+        }
+        return traceLines(
+            for: link,
+            anchors: anchors,
+            fallback: languageCode == "zh"
+                ? "很久以后，有一点回声还在。"
+                : "A rare echo stayed after the long turn.",
+            languageCode: languageCode,
+            limit: 1,
+            includePlaceLine: false
+        ).joined(separator: "\n")
+    }
+
+    static func containsForbiddenNormalUITerm(_ text: String) -> Bool {
+        forbiddenNormalUITerms.contains { text.localizedCaseInsensitiveContains($0) }
+    }
+
+    static let forbiddenNormalUITerms = [
+        "evidenceID",
+        "projectedElementID",
+        "catalogElementID",
+        "WorldStateProjection",
+        "resolver",
+        "validator",
+        "audit",
+        "debug",
+        "json",
+        "store"
+    ]
+
+    private static func traceLines(
+        for link: WorldEvidenceLink?,
+        anchors: [WorldEvidenceAnchor],
+        fallback: String,
+        languageCode: String,
+        limit: Int,
+        includePlaceLine: Bool
+    ) -> [String] {
+        guard let link else {
+            return [fallback]
+        }
+        let anchorByID = Dictionary(anchors.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        let matched = link.anchorIDs.compactMap { anchorByID[$0] }
+            .filter { $0.displayState != .hidden && $0.validationState != .locked }
+
+        var seen = Set<String>()
+        var lines = matched
+            .map { worldTraceLine(for: $0, languageCode: languageCode) }
+            .filter { seen.insert($0).inserted }
+
+        if lines.isEmpty {
+            lines = [localizedFallback(link.fallbackLabel, defaultFallback: fallback, languageCode: languageCode)]
+        }
+        if includePlaceLine && lines.count < limit {
+            lines.append(languageCode == "zh"
+                ? "它在世界里有一个很轻的位置。"
+                : "It has a quiet place in the world.")
+        }
+        return Array(lines.prefix(limit))
+    }
+
+    private static func localizedFallback(
+        _ fallback: String,
+        defaultFallback: String,
+        languageCode: String
+    ) -> String {
+        guard languageCode == "zh" else { return fallback.isEmpty ? defaultFallback : fallback }
+        if fallback.contains("world marker") || fallback.contains("cycle") {
+            return "这个周期留下了很轻的节奏。"
+        }
+        if fallback.contains("seven-day") || fallback.contains("Life") {
+            return "七天的痕迹安静地放在世界里。"
+        }
+        if fallback.contains("rare") || fallback.contains("long turn") {
+            return "很久以后，有一点回声还在。"
+        }
+        if fallback.contains("not stepped") || fallback.contains("faint clue") {
+            return "世界只留下了一点很轻的线索。"
+        }
+        if fallback.contains("quiet") || fallback.contains("trace") {
+            return "地图只留下了一点很轻的痕迹。"
+        }
+        return defaultFallback
+    }
+
+    private static func dailyFallback(mapMood: String?, languageCode: String) -> String {
+        let mood = mapMood ?? "quiet"
+        if languageCode == "zh" {
+            if mood.contains("rain") { return "雨把今天的痕迹留在路边。" }
+            if mood.contains("night") || mood.contains("lit") { return "夜里有一点光被留下来。" }
+            if mood.contains("mist") { return "雾把今天的边缘留得很软。" }
+            return "今天的照片在地图里留下了一点心情。"
+        }
+        if mood.contains("rain") { return "The rain left today's trace near the path." }
+        if mood.contains("night") || mood.contains("lit") { return "A little night light was left behind." }
+        if mood.contains("mist") { return "The mist left today's edges soft." }
+        return "Today's photo left a small mood in the map."
+    }
+}
+
+struct PicodEvidenceCopyDebugCheck: Codable, Hashable, Identifiable {
+    let id: String
+    let passed: Bool
+    let summary: String
+}
+
+struct PicodEvidenceCopyDebugSummary: Codable, Hashable {
+    let checks: [PicodEvidenceCopyDebugCheck]
+
+    var passedCount: Int { checks.filter(\.passed).count }
+    var failedCount: Int { checks.filter { !$0.passed }.count }
+    var summaryLine: String {
+        "evidence copy checked \(checks.count) / failed \(failedCount)"
+    }
+}
+
+enum PicodEvidenceCopyDebugValidator {
+    static func runAll(languageCode: String = "en") -> PicodEvidenceCopyDebugSummary {
+        let umbrella = anchor(id: "copy-umbrella", kind: .waterEdge, storylineID: NarrativeCharacterKind.umbrellaWoman.rawValue)
+        let lamp = anchor(id: "copy-lamp", kind: .light, storylineID: NarrativeCharacterKind.nightLamplighter.rawValue)
+        let mirror = anchor(id: "copy-mirror", kind: .shrine, storylineID: NarrativeCharacterKind.mirrorMiko.rawValue)
+        let cycle = anchor(id: "copy-cycle", kind: .cycleMarker, sourceType: .cycleRecord)
+        let eraHidden = anchor(id: "copy-era-hidden", kind: .eraEcho, sourceType: .eraMemory, displayState: .hidden, validationState: .locked)
+        let eraVisible = anchor(id: "copy-era-visible", kind: .eraEcho, sourceType: .eraMemory, displayState: .remembered)
+        let anchors = [umbrella, lamp, mirror, cycle, eraHidden, eraVisible]
+
+        let umbrellaStory = PicodWorldTraceText.storyEvidenceLine(
+            for: link(id: "copy-story-umbrella", type: .storyCard, anchors: [umbrella]),
+            anchors: anchors,
+            displayState: .traceSeen,
+            recurrenceCount: 1,
+            languageCode: languageCode
+        )
+        let lampStory = PicodWorldTraceText.storyEvidenceLine(
+            for: link(id: "copy-story-lamp", type: .storyCard, anchors: [lamp]),
+            anchors: anchors,
+            displayState: .recurring,
+            recurrenceCount: 2,
+            languageCode: languageCode
+        )
+        let mirrorStory = PicodWorldTraceText.storyEvidenceLine(
+            for: link(id: "copy-story-mirror", type: .storyCard, anchors: [mirror]),
+            anchors: anchors,
+            displayState: .encountered,
+            recurrenceCount: 1,
+            languageCode: languageCode
+        )
+        let dailyFallback = PicodWorldTraceText.dailyTraceLine(
+            for: nil,
+            anchors: [],
+            didCapturePhoto: true,
+            mapMood: "rain-soft",
+            languageCode: languageCode
+        )
+        let album = PicodWorldTraceText.lifeAlbumTraceLine(
+            for: link(id: "copy-album", type: .lifeAlbum, anchors: []),
+            anchors: anchors,
+            capturedDays: 5,
+            languageCode: languageCode
+        )
+        let cycleLine = PicodWorldTraceText.cycleTraceLine(
+            for: link(id: "copy-cycle-link", type: .cycleRecord, anchors: [cycle]),
+            anchors: anchors,
+            toriiCount: 1,
+            languageCode: languageCode
+        )
+        let lockedEra = PicodWorldTraceText.eraTraceLine(
+            for: link(id: "copy-era-hidden-link", type: .eraMemory, anchors: [eraHidden]),
+            anchors: anchors,
+            isUnlocked: false,
+            languageCode: languageCode
+        )
+        let unlockedEra = PicodWorldTraceText.eraTraceLine(
+            for: link(id: "copy-era-visible-link", type: .eraMemory, anchors: [eraVisible]),
+            anchors: anchors,
+            isUnlocked: true,
+            languageCode: languageCode
+        )
+        let missingProjection = PicodWorldTraceText.storyEvidenceLine(
+            for: WorldEvidenceLink.fallback(
+                sourceMemoryType: .storyCard,
+                sourceMemoryID: "copy-missing",
+                label: "The world only left a faint clue.",
+                debugSummary: "copy missing projection"
+            ),
+            anchors: [],
+            displayState: .traceSeen,
+            recurrenceCount: 1,
+            languageCode: languageCode
+        )
+        let aggregate = [
+            umbrellaStory,
+            lampStory,
+            mirrorStory,
+            dailyFallback,
+            album,
+            cycleLine,
+            lockedEra,
+            unlockedEra,
+            missingProjection
+        ].joined(separator: "\n")
+
+        let checks = [
+            check("umbrella-copy", umbrellaStory.contains(languageCode == "zh" ? "雨" : "rain"), umbrellaStory),
+            check("lamplighter-copy", lampStory.contains(languageCode == "zh" ? "灯" : "lamp"), lampStory),
+            check("mirror-copy", mirrorStory.contains(languageCode == "zh" ? "神社" : "shrine"), mirrorStory),
+            check("daily-fallback-copy", !dailyFallback.isEmpty, dailyFallback),
+            check("life-album-copy", album.contains(languageCode == "zh" ? "七天" : "seven-day") || album.contains("Life"), album),
+            check("cycle-copy", cycleLine.contains(languageCode == "zh" ? "周期" : "cycle") || cycleLine.contains("marker"), cycleLine),
+            check("locked-era-quiet", lockedEra == (languageCode == "zh" ? "还没有显现。" : "Not visible yet."), lockedEra),
+            check("unlocked-era-copy", unlockedEra.contains(languageCode == "zh" ? "回声" : "echo"), unlockedEra),
+            check("missing-projection-copy", !missingProjection.isEmpty, missingProjection),
+            check("no-forbidden-normal-terms", !PicodWorldTraceText.containsForbiddenNormalUITerm(aggregate), aggregate)
+        ]
+
+        return PicodEvidenceCopyDebugSummary(checks: checks)
+    }
+
+    private static func check(_ id: String, _ passed: Bool, _ summary: String) -> PicodEvidenceCopyDebugCheck {
+        PicodEvidenceCopyDebugCheck(id: id, passed: passed, summary: summary)
+    }
+
+    private static func link(
+        id: String,
+        type: WorldEvidenceMemoryType,
+        anchors: [WorldEvidenceAnchor]
+    ) -> WorldEvidenceLink {
+        WorldEvidenceLink(
+            sourceMemoryType: type,
+            sourceMemoryID: id,
+            anchorIDs: anchors.map(\.id),
+            primaryAnchorID: anchors.first?.id,
+            fallbackLabel: "The world only left a faint clue.",
+            canHighlightOnMap: anchors.first?.anchorPoint != nil,
+            canOpenDetail: !anchors.isEmpty,
+            debugSummary: "copy validation"
+        )
+    }
+
+    private static func anchor(
+        id: String,
+        kind: WorldEvidenceAnchorKind,
+        sourceType: WorldEvidenceSourceType = .mapTrace,
+        storylineID: String? = nil,
+        displayState: WorldEvidenceAnchorDisplayState = .visible,
+        validationState: WorldEvidenceAnchorValidationState = .valid
+    ) -> WorldEvidenceAnchor {
+        WorldEvidenceAnchor(
+            id: id,
+            evidenceID: "copy-evidence-\(id)",
+            evidenceSourceType: sourceType,
+            sourceRecordID: "copy-record-\(id)",
+            localDayKey: nil,
+            lifeID: nil,
+            cycleID: nil,
+            eraID: nil,
+            storylineID: storylineID,
+            projectedElementID: "copy-element-\(id)",
+            catalogElementID: "copy-catalog-\(id)",
+            mapVariantID: "copy-map",
+            anchorKind: kind,
+            anchorPoint: MapCoord(x: 1, y: 1),
+            displayState: displayState,
+            persistenceScope: .daily,
+            userFacingLabel: "",
+            debugReason: "copy validation fixture",
+            validationState: validationState
+        )
+    }
+}

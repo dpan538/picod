@@ -196,6 +196,11 @@ struct WorldMapRichnessAuditReport: Codable, Hashable {
                 lines.append("  + \(report.actions.count - 4) more projection action(s)")
             }
         }
+        let copyAudit = PicodEvidenceCopyDebugValidator.runAll()
+        lines.append(copyAudit.summaryLine)
+        for check in copyAudit.checks where !check.passed {
+            lines.append("  copy check failed \(check.id): \(check.summary)")
+        }
         if evidenceLinkAudit.scenarioCount > 0 {
             lines.append(evidenceLinkAudit.summaryLine)
             for report in evidenceLinkAudit.scenarioReports.prefix(6) {
