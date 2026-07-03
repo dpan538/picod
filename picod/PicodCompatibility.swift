@@ -11,20 +11,20 @@ struct MapAmbientMoodCurve: Equatable {
 }
 
 enum PicodFont {
-    static let displayLG = Font.system(size: 22, weight: .bold, design: .serif)
-    static let monoSM = Font.system(size: 11, weight: .regular, design: .monospaced)
-    static let monoBoldSM = Font.system(size: 11, weight: .bold, design: .monospaced)
+    static let displayLG = Font.custom("AmericanTypewriter", size: 22)
+    static let monoSM = Font.custom("Courier", size: 11)
+    static let monoBoldSM = Font.custom("Courier-Bold", size: 11)
 
     static func display(_ size: CGFloat) -> Font {
-        .system(size: size, weight: .bold, design: .serif)
+        .custom("AmericanTypewriter", size: size)
     }
 
     static func mono(_ size: CGFloat) -> Font {
-        .system(size: size, weight: .regular, design: .monospaced)
+        .custom("Courier", size: size)
     }
 
     static func monoBold(_ size: CGFloat) -> Font {
-        .system(size: size, weight: .bold, design: .monospaced)
+        .custom("Courier-Bold", size: size)
     }
 }
 
@@ -42,17 +42,17 @@ struct PicodSymbolIcon: View {
 
     var body: some View {
         Image(systemName: systemName)
-            .font(.system(size: 18, weight: .semibold))
+            .font(.system(size: 23, weight: .semibold))
             .symbolRenderingMode(.monochrome)
             .foregroundStyle(Color.picod_ink)
-            .frame(width: PicodIconGrid.box, height: PicodIconGrid.box)
+            .frame(width: PicodIconGrid.box + 4, height: PicodIconGrid.box + 4)
     }
 }
 
 extension Color {
-    static let picod_paper = Color(hex: "F4EFE4")
-    static let picod_paper2 = Color(hex: "E8DFD0")
-    static let picod_ink = Color(hex: "2F281F")
+    static let picod_paper = Color(hex: "EDEADE")
+    static let picod_paper2 = Color(hex: "E4DDCE")
+    static let picod_ink = Color(hex: "1A1814")
     static let picod_ink2 = Color(hex: "665747")
     static let picod_mid = Color(hex: "8A7A68")
     static let picod_tile_a = Color(hex: "CBD7B8")
@@ -95,6 +95,6 @@ extension Color {
 
 extension TestMapFactory {
     static func devMap(context: WorldGenerationContext) -> TestMap {
-        fullWorld(context: context)
+        reviewWorld(context: context, variant: DevTestMode.mapReviewVariant)
     }
 }

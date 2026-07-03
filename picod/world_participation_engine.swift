@@ -1,6 +1,6 @@
 import Foundation
 
-enum ParticipationLevel: String, Codable {
+enum ParticipationLevel: String, Codable, Hashable {
     case full
     case partial
     case minimal

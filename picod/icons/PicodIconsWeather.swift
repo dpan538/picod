@@ -240,15 +240,19 @@ struct WeatherIcon: View {
     let condition: WeatherCondition
 
     var body: some View {
+        PicodSymbolIcon(systemName: symbolName)
+    }
+
+    private var symbolName: String {
         switch condition {
-        case .sunny: SunnyIcon()
-        case .cloudy: CloudyIcon()
-        case .partlyCloudy: PartlyCloudyIcon()
-        case .rainy: RainyIcon()
-        case .stormy: StormyIcon()
-        case .snowy: SnowyIcon()
-        case .foggy: FoggyIcon()
-        case .night: NightIcon()
+        case .sunny: return "sun.max"
+        case .cloudy: return "cloud"
+        case .partlyCloudy: return "cloud.sun"
+        case .rainy: return "cloud.rain"
+        case .stormy: return "cloud.bolt.rain"
+        case .snowy: return "cloud.snow"
+        case .foggy: return "cloud.fog"
+        case .night: return "moon.stars"
         }
     }
 }

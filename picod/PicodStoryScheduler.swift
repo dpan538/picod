@@ -15,6 +15,7 @@ struct PicodStoryScheduler {
     func evaluate(context: StoryTriggerContext) -> PicodStoryScheduleResult {
         let engine = StoryTriggerEngine()
         let candidates = engine.eligibleBeats(context: context)
+            .filter(\.isP0ActiveStory)
         guard context.progress.firedStoryBeatIds.isEmpty else {
             return PicodStoryScheduleResult(candidates: candidates, scheduled: [])
         }

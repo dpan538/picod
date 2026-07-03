@@ -72,7 +72,11 @@ struct CloseIcon: View {
 // SF Symbol: gearshape
 struct SettingsIcon: View {
     var body: some View {
-        PicodSymbolIcon(systemName: "gearshape")
+        Image(systemName: "gearshape")
+            .font(.system(size: 30, weight: .semibold))
+            .symbolRenderingMode(.monochrome)
+            .foregroundStyle(Color.picod_ink)
+            .frame(width: 54, height: 54)
     }
 }
 

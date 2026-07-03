@@ -4651,6 +4651,7 @@ struct PicoPortraitView: View {
         let accent = accentHex.flatMap { Color(hex: $0) } ?? formTintColor
         if token == "5" {
             if formId == 2 { return Color(hex: "F8C8C8") }
+            if formId == 117 { return Color(hex: "D8C890") }
             return accent
         }
         if let custom = Self.perFormColors(for: formId), let hex = custom[token] {

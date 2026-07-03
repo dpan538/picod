@@ -7,6 +7,7 @@ import Combine
 import SwiftUI
 import UIKit
 import AVFoundation
+import PhotosUI
 
 struct ContentView: View {
     @StateObject private var worldInputService = PicodWorldInputService()
@@ -16,6 +17,7 @@ struct ContentView: View {
     @StateObject private var photoSnapshotDatabase = PhotoTraitSnapshotDatabase()
     @StateObject private var worldSeedDatabase = WorldSeedDatabase()
     @StateObject private var progressStore = PicodProgressStore()
+    @StateObject private var memoryStore = PicodMemoryStore()
     @State private var runtimeWorldContext: WorldGenerationContext = DevTestMode.worldGenerationContext
     @State private var runtimeDevMap: TestMap = TestMapFactory.devMap(context: DevTestMode.worldGenerationContext)
     @State private var activeStoryBeatIds: [String] = []
@@ -43,10 +45,14 @@ struct ContentView: View {
     @State private var lastFallbackToneState: FallbackToneState = .none
     @State private var nowTick: Date = Date()
     @State private var captureFeedbackText: String?
+    @State private var captureTraceLines: [String] = []
+    @State private var captureTraceToken = UUID()
     @State private var photoDebugOutput: PhotoClassificationPipelineOutput?
     @State private var latestRenderResult: PicoRenderResult?
     @State private var photoMockReport: PhotoPipelineMockReport?
     @State private var showCompanionDebugPanel = false
+    @State private var showingPhotoPicker = false
+    @State private var selectedPhotoPickerItem: PhotosPickerItem?
     @Environment(\.scenePhase) private var scenePhase
 
     @AppStorage("pref_language") private var languageCode = "en"
@@ -86,11 +92,191 @@ struct ContentView: View {
     }
 
     private var shouldRenderWorld: Bool {
-        appState != .empty
+        appState != .empty || shouldUsePreviewWorkingState
+    }
+
+    private var shouldUsePreviewWorkingState: Bool {
+        #if DEBUG
+        return DevTestMode.previewWorkingStateWhenEmpty
+            && appState == .empty
+            && photoSnapshotDatabase.snapshots.isEmpty
+        #else
+        return false
+        #endif
+    }
+
+    private var displayAppState: AppState {
+        shouldUsePreviewWorkingState ? .picoAlive : appState
+    }
+
+    private var displayDayCount: Int {
+        shouldUsePreviewWorkingState ? 1 : dayCount
+    }
+
+    private var displayLatestFormId: Int {
+        shouldUsePreviewWorkingState ? DevTestMode.previewFormId : latestFormId
+    }
+
+    private var displayLatestMapTintHex: String {
+        shouldUsePreviewWorkingState ? "" : latestMapTintHex
+    }
+
+    private var displayLatestCompanionBackgroundHex: String {
+        shouldUsePreviewWorkingState ? "" : latestCompanionBackgroundHex
+    }
+
+    private var displayHasPhotoToday: Bool {
+        shouldUsePreviewWorkingState ? true : hasPhotoToday
+    }
+
+    private var displayWeather: (tempText: String, humidText: String, condition: WeatherCondition) {
+        shouldUsePreviewWorkingState ? DevTestMode.reviewWeather : worldInputService.dashboardWeather
+    }
+
+    private var displayHumidityPercent: Int {
+        Int(displayWeather.humidText.filter(\.isNumber)) ?? 59
+    }
+
+    private var displayLogEntries: [PetLogEntry] {
+        guard shouldUsePreviewWorkingState else { return logEntries }
+        let now = previewLogDate(hour: 0, minute: 14)
+        return [
+            PetLogEntry(
+                timestamp: now,
+                message: languageCode == "zh"
+                    ? "pico 在草地间慢慢走着。"
+                    : "pico is wandering quietly in the meadow.",
+                type: .movement
+            ),
+            PetLogEntry(
+                timestamp: now,
+                message: languageCode == "zh"
+                    ? "pico 在夜里慢了下来，沿着有光的小路走。"
+                    : "pico moved more slowly at night, staying\n     near lit paths.",
+                type: .movement
+            )
+        ]
+    }
+
+    private var displayLogTime: String {
+        shouldUsePreviewWorkingState ? "00:14" : logTime
+    }
+
+    private var displayDiaryNarrative: String? {
+        diaryDatabase.story(
+            for: nowTick,
+            timezoneIdentifier: worldInputService.worldInput.stable.timezoneIdentifier,
+            languageCode: languageCode,
+            formId: displayLatestFormId
+        )
+    }
+
+    private var displayPetStatusText: String {
+        if shouldUsePreviewWorkingState {
+            return languageCode == "zh"
+                ? "夜间运行正常；保持低速和稳定节奏。"
+                : "Night operation normal; maintaining low\nspeed and stable cadence."
+        }
+        return petStatusText
+    }
+
+    private var displayCurrentGenerationId: String {
+        shouldUsePreviewWorkingState ? "debug-preview-generation" : currentGenerationId
+    }
+
+    private var displayProgressRecord: PicodProgressRecord? {
+        guard shouldUsePreviewWorkingState else { return progressStore.currentRecord }
+        return PicodProgressRecord(
+            eraId: "debug-preview-era",
+            absoluteDayIndex: 1,
+            cycleIndex: 1,
+            dayInCycle: 1,
+            calendarDayKey: "debug-preview-day",
+            dayStartAt: nowTick,
+            generationId: displayCurrentGenerationId,
+            photoSnapshotDayKey: "\(displayCurrentGenerationId)_day1",
+            interactionRecordCount: 2,
+            diarySummaryDayKey: nil,
+            worldSeedGenerationId: "debug-preview-world",
+            firedStoryBeatIds: displayBeatIds,
+            participationState: .captured,
+            openedAt: nowTick.addingTimeInterval(-86_400 * 2),
+            finalizedAt: nil
+        )
+    }
+
+    private var displayBeatIds: [String] {
+        shouldUsePreviewWorkingState
+            ? [
+                "nightLamplighter:debug-preview-era:day1:dusk_or_night",
+                "umbrellaWoman:debug-preview-era:day1:rain"
+            ]
+            : activeStoryBeatIds
+    }
+
+    private var displaySnapshots: [PhotoTraitSnapshot] {
+        shouldUsePreviewWorkingState ? previewSnapshots : photoSnapshotDatabase.snapshots
+    }
+
+    private var previewSnapshots: [PhotoTraitSnapshot] {
+        let generationId = "debug-preview-generation"
+        let palette = [
+            PhotoPaletteColor(red: 0.86, green: 0.82, blue: 0.72, alpha: 1),
+            PhotoPaletteColor(red: 0.56, green: 0.63, blue: 0.42, alpha: 1)
+        ]
+        let start = nowTick.addingTimeInterval(-86_400 * 2)
+        return [
+            PhotoTraitSnapshot(
+                dayKey: "\(generationId)_day1",
+                generationId: generationId,
+                dayIndex: 1,
+                rawVisionTopN: [VisionLabel(identifier: "meadow", confidence: 0.82)],
+                normalizedLabels: ["meadow"],
+                matchedClusterScores: [],
+                chosenFormId: 117,
+                replacedParts: PicoPart.allCases,
+                colorPalette: palette,
+                timestamp: start
+            ),
+            PhotoTraitSnapshot(
+                dayKey: "\(generationId)_day2",
+                generationId: generationId,
+                dayIndex: 2,
+                rawVisionTopN: [VisionLabel(identifier: "paper", confidence: 0.74)],
+                normalizedLabels: ["paper"],
+                matchedClusterScores: [],
+                chosenFormId: 23,
+                replacedParts: [.head],
+                colorPalette: palette,
+                timestamp: start.addingTimeInterval(86_400)
+            ),
+            PhotoTraitSnapshot(
+                dayKey: "\(generationId)_day3",
+                generationId: generationId,
+                dayIndex: 3,
+                rawVisionTopN: [VisionLabel(identifier: "cloud", confidence: 0.78)],
+                normalizedLabels: ["cloud"],
+                matchedClusterScores: [],
+                chosenFormId: 55,
+                replacedParts: [.limbs],
+                colorPalette: palette,
+                timestamp: start.addingTimeInterval(86_400 * 2)
+            )
+        ]
+    }
+
+    private func previewLogDate(hour: Int, minute: Int) -> Date {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: worldInputService.worldInput.stable.timezoneIdentifier) ?? .current
+        var components = calendar.dateComponents([.year, .month, .day], from: nowTick)
+        components.hour = hour
+        components.minute = minute
+        components.second = 0
+        return calendar.date(from: components) ?? nowTick
     }
 
     private var diarySubtitleText: String {
-        (languageCode == "zh" ? "天数" : "days") + " " + String(format: "%03d", max(dayCount, 0))
+        (languageCode == "zh" ? "天数" : "days") + " " + String(format: "%03d", max(displayDayCount, 0))
     }
 
     private var diaryEmptyText: String {
@@ -101,12 +287,12 @@ struct ContentView: View {
 
     private var cameraPermissionMessage: String {
         languageCode == "zh"
-            ? "需要相机权限才能更新今日形态。"
-            : "Camera permission is required to update today's form."
+            ? "相机没有打开。你也可以从相册选今天的一张照片。"
+            : "Camera is off. You can still choose one photo from your library."
     }
 
     private var cameraInitMessage: String {
-        cameraSetupMessage ?? (languageCode == "zh" ? "相机初始化失败。" : "Camera initialization failed.")
+        cameraSetupMessage ?? (languageCode == "zh" ? "相机暂时不可用。你也可以选一张照片。" : "Camera is not available right now. You can choose a photo instead.")
     }
 
     private var cameraAlertTitle: String {
@@ -127,7 +313,7 @@ struct ContentView: View {
     }
 
     var body: some View {
-        ZStack(alignment: .leading) {
+        ZStack(alignment: .trailing) {
             Color.picod_paper.ignoresSafeArea()
 
             GeometryReader { geo in
@@ -139,27 +325,53 @@ struct ContentView: View {
                         }
                     }
             }
-            .offset(x: showLineage ? UIScreen.main.bounds.width : 0)
+            .ignoresSafeArea(.container, edges: .top)
+            .offset(x: showLineage ? -UIScreen.main.bounds.width : 0)
+
+            if displayAppState == .picoAlive && !showLineage && !shouldUsePreviewWorkingState {
+                VStack {
+                    Spacer(minLength: 0)
+                    Button {
+                        if reduceMotion {
+                            showLineage = true
+                        } else {
+                            withAnimation(.easeInOut(duration: 0.35)) {
+                                showLineage = true
+                            }
+                        }
+                    } label: {
+                        SideStoryHandleView()
+                    }
+                    .buttonStyle(.plain)
+                    .offset(x: 10)
+                    .accessibilityLabel(languageCode == "zh" ? "故事信号" : "Story signals")
+                    Spacer(minLength: 132)
+                }
+            }
 
             PicodSideStoryPanelView(
-                progress: progressStore.currentRecord,
-                beatIds: activeStoryBeatIds,
-                generationId: currentGenerationId,
-                snapshots: photoSnapshotDatabase.snapshots,
-                accentHex: latestMapTintHex.isEmpty ? nil : latestMapTintHex,
+                progress: displayProgressRecord,
+                beatIds: displayBeatIds,
+                generationId: displayCurrentGenerationId,
+                snapshots: displaySnapshots,
+                accentHex: displayLatestMapTintHex.isEmpty ? nil : displayLatestMapTintHex,
+                diaryNarrative: displayDiaryNarrative,
+                isPresented: showLineage,
+                memoryStore: memoryStore,
                 languageCode: languageCode,
                 onDismiss: {
                     closeSideStoryPanel()
                 }
             )
             .frame(width: UIScreen.main.bounds.width)
-            .offset(x: showLineage ? 0 : -(UIScreen.main.bounds.width + 1))
+            .offset(x: showLineage ? 0 : UIScreen.main.bounds.width + 1)
         }
         .animation(.spring(response: 0.32, dampingFraction: 0.94, blendDuration: 0.08), value: showLineage)
         .background(Color.picod_paper.ignoresSafeArea())
         .onAppear {
             bootstrapRuntimeStateFromPersistence()
-            worldSimulation.setAppState(appState)
+            runLifecycleReconciliation(reason: "launch")
+            worldSimulation.setAppState(displayAppState)
             if DevTestMode.showMockSeed {
                 let mockSeed = WorldSeedEngine.mockGenerate()
                 print("[WorldSeedMock] \(mockSeed)")
@@ -174,9 +386,24 @@ struct ContentView: View {
             syncRuntimeWorldContext(from: worldInputService.worldInput)
             appendFallbackToneLogIfNeeded(force: true)
 
+            #if DEBUG
+            if ProcessInfo.processInfo.environment["PICOD_OPEN_SETTINGS"] == "1" {
+                showingSettings = true
+            }
+            if ProcessInfo.processInfo.environment["PICOD_OPEN_SIDE_STORY"] == "1" {
+                showLineage = true
+            }
+            if ProcessInfo.processInfo.environment["PICOD_RUN_P0_ACCEPTANCE"] == "1" {
+                let summary = PicodP0DebugScenarios.runSummary()
+                print("[PicodP0Debug] auto-run passed=\(summary.passedScenarioCount) failed=\(summary.failedScenarioCount)")
+            }
+            #endif
+
             if DevTestMode.useFullTestMap && !DevTestMode.showObjectGalleryDebug && shouldRenderWorld {
                 configureDevTestWorld()
-                worldSimulation.start(languageCode: languageCode, reduceMotion: reduceMotion)
+                if !shouldFreezePreviewReferenceMovement {
+                    worldSimulation.start(languageCode: languageCode, reduceMotion: reduceMotion)
+                }
             }
         }
         .onDisappear {
@@ -189,6 +416,7 @@ struct ContentView: View {
         .onChange(of: scenePhase) {
             if scenePhase == .active {
                 worldInputService.refresh(reason: .foreground)
+                runLifecycleReconciliation(reason: "foreground")
             }
         }
         .onChange(of: worldInputService.worldInput) { _, newInput in
@@ -210,7 +438,7 @@ struct ContentView: View {
             handleReduceMotionChanged()
         }
         .onChange(of: appStateRaw) { _, _ in
-            worldSimulation.setAppState(appState)
+            worldSimulation.setAppState(displayAppState)
         }
         .onChange(of: cameraManager.isConfigured) { _, configured in
             handleCameraConfiguredChanged(configured)
@@ -229,6 +457,10 @@ struct ContentView: View {
                     processCapturedPhoto(image)
                 }
             )
+        }
+        .photosPicker(isPresented: $showingPhotoPicker, selection: $selectedPhotoPickerItem, matching: .images)
+        .onChange(of: selectedPhotoPickerItem) { _, newItem in
+            handleSelectedPhotoPickerItem(newItem)
         }
         .alert(
             isPresented: Binding(
@@ -262,8 +494,8 @@ struct ContentView: View {
         let screenW = (rawW.isFinite && rawW > 0) ? rawW : 390
         let screenH = (rawH.isFinite && rawH > 0) ? rawH : 844
         let mapSize = screenW
-        let topBarH: CGFloat = 58
-        let statusBarH: CGFloat = max(0, ((screenW - 6) / 4) - 4)
+        let statusBarH: CGFloat = screenW * (101.0 / 390.0)
+        let topBarH = statusBarH
         let mapHeight = mapSize
         let tileSize = max(1, mapSize / CGFloat(PicodMap.tileColumns))
 
@@ -280,13 +512,13 @@ struct ContentView: View {
             ambientCurve: ambientCurve
         )
 
-        let weather = worldInputService.dashboardWeather
-        let recordValue = String(format: "%03d", max(dayCount, 0))
+        let weather = displayWeather
+        let recordValue = String(format: "%03d", max(displayDayCount, 0))
         let diaryNarrative = diaryDatabase.story(
             for: Date(),
             timezoneIdentifier: worldInputService.worldInput.stable.timezoneIdentifier,
             languageCode: languageCode,
-            formId: latestFormId
+            formId: displayLatestFormId
         )
         let dashboard: DashboardView = buildDashboard(
             weather: weather,
@@ -295,15 +527,16 @@ struct ContentView: View {
             mapHeight: mapHeight,
             statusBarHeight: statusBarH,
             mapArea: mapArea,
-            appState: appState
+            appState: displayAppState
         )
 
-        ZStack {
+        ZStack(alignment: .top) {
             Color.picod_paper.ignoresSafeArea()
 
             VStack(spacing: 0) {
                 dashboard
             }
+            .frame(maxHeight: .infinity, alignment: .top)
 
             if DevTestMode.showPhotoPipelineDebug || showCompanionDebugPanel {
                 VStack {
@@ -332,15 +565,12 @@ struct ContentView: View {
                 )
             }
 
-            if let captureFeedbackText {
+            if !captureTraceLines.isEmpty {
                 VStack {
-                    Text(captureFeedbackText)
-                        .font(PicodFont.mono(12))
-                        .foregroundStyle(Color.picod_paper)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(Color.picod_ink.opacity(0.9))
-                        .clipShape(RoundedRectangle(cornerRadius: 3))
+                    TodayTraceToastView(
+                        title: languageCode == "zh" ? "今日痕迹" : "today's trace",
+                        lines: captureTraceLines
+                    )
                         .padding(.top, 12)
                     Spacer(minLength: 0)
                 }
@@ -382,7 +612,7 @@ struct ContentView: View {
         devMap: TestMap?,
         ambientCurve: MapAmbientMoodCurve
     ) -> AnyView {
-        if appState == .empty {
+        if displayAppState == .empty {
             return AnyView(
                 ZStack {
                     Color.picod_paper
@@ -406,19 +636,22 @@ struct ContentView: View {
                     testMap: devMap,
                     showPetSpawn: DevTestMode.useFullTestMap,
                     petCoord: DevTestMode.useFullTestMap ? worldSimulation.petCoord : nil,
-                    petFormId: latestFormId,
-                    petAccentHex: latestMapTintHex.isEmpty ? nil : latestMapTintHex,
+                    petFormId: displayLatestFormId,
+                    petAccentHex: displayLatestMapTintHex.isEmpty ? nil : displayLatestMapTintHex,
                     runtimeProps: DevTestMode.useFullTestMap ? worldSimulation.runtimeProps : [],
                     runtimeAnimals: DevTestMode.useFullTestMap ? worldSimulation.runtimeAnimals : [],
-                    ambientCurve: ambientCurve
+                    ambientCurve: ambientCurve,
+                    weatherCondition: displayWeather.condition,
+                    humidityPercent: displayHumidityPercent,
+                    animateAmbient: !reduceMotion
                 )
                 .frame(width: mapSize, height: mapHeight)
 
-                if appState != .picoEgg {
+                if displayAppState != .picoEgg {
                     PetView(
-                        formId: latestFormId,
-                        accentHex: latestMapTintHex.isEmpty ? nil : latestMapTintHex,
-                        backgroundHex: latestCompanionBackgroundHex.isEmpty ? nil : latestCompanionBackgroundHex
+                        formId: displayLatestFormId,
+                        accentHex: displayLatestMapTintHex.isEmpty ? nil : displayLatestMapTintHex,
+                        backgroundHex: displayLatestCompanionBackgroundHex.isEmpty ? nil : displayLatestCompanionBackgroundHex
                     )
                         .frame(width: 104, height: 122)
                         .padding(.leading, 20)
@@ -461,13 +694,13 @@ struct ContentView: View {
             skyValue: localizedWeatherTitle(weather.condition),
             recordValue: recordValue,
             weatherCondition: weather.condition,
-            logEntries: logEntries,
-            logTime: logTime,
-            petStatusText: appState == .empty
+            logEntries: displayLogEntries,
+            logTime: displayLogTime,
+            petStatusText: appState == .empty && !shouldUsePreviewWorkingState
                 ? (languageCode == "zh" ? "先拍一张照片，世界才会醒来。" : "take one photo to wake the world.")
-                : petStatusText,
-            hasPhotoToday: hasPhotoToday,
-            appState: appState,
+                : displayPetStatusText,
+            hasPhotoToday: displayHasPhotoToday,
+            appState: displayAppState,
             mapSize: mapSize,
             mapHeight: mapHeight,
             statusBarHeight: statusBarHeight,
@@ -486,6 +719,9 @@ struct ContentView: View {
             },
             onPrimaryAction: {
                 handlePrimaryAction(weatherCondition: weather.condition)
+            },
+            onChoosePhoto: {
+                requestPhotoLibraryFlow()
             },
             onOpenStoryline: {
                 if reduceMotion {
@@ -621,11 +857,11 @@ struct ContentView: View {
     }
 
     private func cameraStatusLine() -> String {
-        let cycle = max(1, Int(ceil(Double(max(1, dayCount)) / 7.0)))
+        let cycle = max(1, Int(ceil(Double(max(1, displayDayCount)) / 7.0)))
         if languageCode == "zh" {
-            return "DAY \(String(format: "%03d", dayCount)) · CYCLE \(String(format: "%02d", cycle))"
+            return "DAY \(String(format: "%03d", displayDayCount)) · CYCLE \(String(format: "%02d", cycle))"
         }
-        return "DAY \(String(format: "%03d", dayCount)) · CYCLE \(String(format: "%02d", cycle))"
+        return "DAY \(String(format: "%03d", displayDayCount)) · CYCLE \(String(format: "%02d", cycle))"
     }
 
     private func ambientHeadline(
@@ -769,6 +1005,17 @@ struct ContentView: View {
     }
 
     private func syncRuntimeWorldContext(from input: PicodWorldInput) {
+        if shouldUsePreviewWorkingState {
+            runtimeWorldContext = DevTestMode.worldGenerationContext
+            runtimeDevMap = TestMapFactory.devMap(context: DevTestMode.worldGenerationContext)
+            worldSimulation.reloadMap(runtimeDevMap, languageCode: languageCode)
+            configureDevTestWorld()
+            if !shouldFreezePreviewReferenceMovement {
+                worldSimulation.start(languageCode: languageCode, reduceMotion: reduceMotion)
+            }
+            return
+        }
+
         guard shouldRenderWorld, DevTestMode.useFullTestMap, !DevTestMode.showObjectGalleryDebug else { return }
         let context = WorldGenerationContext.from(worldInput: input)
         guard context != runtimeWorldContext else { return }
@@ -779,6 +1026,10 @@ struct ContentView: View {
         worldSimulation.reloadMap(nextMap, languageCode: languageCode)
         configureDevTestWorld()
         worldSimulation.start(languageCode: languageCode, reduceMotion: reduceMotion)
+    }
+
+    private var shouldFreezePreviewReferenceMovement: Bool {
+        shouldUsePreviewWorkingState && DevTestMode.freezePreviewReferenceMovement
     }
 
     private func headlinePhase(hour: Int) -> HeadlinePhase {
@@ -899,10 +1150,7 @@ struct ContentView: View {
                 VStack(spacing: 0) {
                     Spacer(minLength: 0)
 
-                    SettingsView(
-                        onClose: closeSettings,
-                        onInitialize: runInitializeReset
-                    )
+                    SettingsView(onClose: closeSettings)
                         .frame(maxWidth: .infinity)
                         .frame(height: min(max(screenHeight * 0.5, 320), 500))
                         .background(Color.picod_paper)
@@ -958,14 +1206,14 @@ struct ContentView: View {
 
     private func handleLineageSwipe(_ value: DragGesture.Value) {
         guard DevTestMode.enableStorySidePanel else { return }
-        guard appState == .picoAlive else { return }
+        guard displayAppState == .picoAlive else { return }
         let velocityX = estimatedVelocityX(for: value)
 
-        if value.translation.width > 40, velocityX > 300, !showLineage {
+        if value.translation.width < -40, velocityX < -300, !showLineage {
             withAnimation(.easeInOut(duration: 0.35)) {
                 showLineage = true
             }
-        } else if value.translation.width < -40, velocityX < -300, showLineage {
+        } else if value.translation.width > 40, velocityX > 300, showLineage {
             closeSideStoryPanel()
         }
     }
@@ -995,7 +1243,14 @@ struct ContentView: View {
             case .night: label = "夜"
             }
         } else {
-            label = condition.title
+            switch condition {
+            case .sunny:
+                label = "Clear"
+            case .partlyCloudy:
+                label = "Cloudy"
+            default:
+                label = condition.title
+            }
         }
 
         // Hard UI rule: weather label must never overflow.
@@ -1015,6 +1270,13 @@ struct ContentView: View {
     }
 
     private func handlePrimaryAction(weatherCondition: WeatherCondition) {
+        if shouldUsePreviewWorkingState {
+            petStatusText = languageCode == "zh"
+                ? "夜间运行正常；保持低速和稳定节奏。"
+                : "Night operation normal; maintaining low speed and stable cadence."
+            return
+        }
+
         if appState == .empty || appState == .picoEgg || !hasPhotoToday {
             requestCameraFlow()
             return
@@ -1039,6 +1301,7 @@ struct ContentView: View {
         diaryDatabase.resetAll()
         interactionDatabase.resetAll()
         progressStore.resetAll()
+        memoryStore.resetAll()
 
         hasEverCaptured = false
         hasPhotoToday = false
@@ -1050,6 +1313,7 @@ struct ContentView: View {
         logEntries = []
         petStatusText = ""
         captureFeedbackText = nil
+        captureTraceLines = []
         photoDebugOutput = nil
         latestRenderResult = nil
         lastLoggedText = ""
@@ -1090,6 +1354,45 @@ struct ContentView: View {
             }
             showingCamera = true
             cameraManager.startSession()
+        }
+    }
+
+    private func requestPhotoLibraryFlow() {
+        selectedPhotoPickerItem = nil
+        showingPhotoPicker = true
+    }
+
+    private func handleSelectedPhotoPickerItem(_ item: PhotosPickerItem?) {
+        guard let item else { return }
+        Task(priority: .userInitiated) {
+            let data = try? await item.loadTransferable(type: Data.self)
+            await MainActor.run {
+                defer { selectedPhotoPickerItem = nil }
+                guard let data, let image = UIImage(data: data) else {
+                    showCaptureTrace(PicodTodayTraceText.photoImportFailed(languageCode: languageCode))
+                    return
+                }
+                processCapturedPhoto(image)
+            }
+        }
+    }
+
+    private func showCaptureTrace(_ lines: [String], duration: UInt64 = 4_200_000_000) {
+        let cleaned = Array(lines.filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }.prefix(3))
+        guard !cleaned.isEmpty else { return }
+        let token = UUID()
+        captureTraceToken = token
+        captureFeedbackText = nil
+        withAnimation(.easeInOut(duration: 0.16)) {
+            captureTraceLines = cleaned
+        }
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: duration)
+            if captureTraceToken == token {
+                withAnimation(.easeOut(duration: 0.16)) {
+                    captureTraceLines = []
+                }
+            }
         }
     }
 
@@ -1150,6 +1453,35 @@ struct ContentView: View {
         }
     }
 
+    private func runLifecycleReconciliation(reason: String) {
+        let now = Date()
+        let timezoneIdentifier = worldInputService.worldInput.stable.timezoneIdentifier
+        let result = PicodLifecycleReconciler().reconcile(
+            now: now,
+            timezoneIdentifier: timezoneIdentifier,
+            languageCode: languageCode,
+            latestFormID: latestFormId,
+            progressStore: progressStore,
+            memoryStore: memoryStore,
+            worldSeedDatabase: worldSeedDatabase,
+            diaryDatabase: diaryDatabase,
+            preferredGenerationID: currentGenerationId.isEmpty ? nil : currentGenerationId
+        )
+        guard result != .empty else { return }
+
+        if result.didReturnToEgg {
+            withAnimation(.easeInOut(duration: 0.24)) {
+                appStateRaw = AppState.picoEgg.rawValue
+            }
+            latestFormId = 0
+        }
+        print(
+            "[PicodLifecycle] \(reason) life=\(result.closedLifeAlbumIDs.count) " +
+            "cycle=\(result.closedCycleRecordIDs.count) era=\(result.closedEraMemoryIDs.count) " +
+            "placeholders=\(result.placeholderDailyRecordCount)"
+        )
+    }
+
     private func handleLanguageChanged() {
         guard shouldRenderWorld, DevTestMode.useFullTestMap, !DevTestMode.showObjectGalleryDebug else { return }
         configureDevTestWorld()
@@ -1177,39 +1509,49 @@ struct ContentView: View {
         currentGenerationId = generationId
         let calendarDayKey = progress.calendarDayKey
         let existing = photoSnapshotDatabase.snapshots(for: generationId)
-        let previousGenerationFirstFormId = previousGenerationDay1FormId(before: generationId)
+        let previousGenome = memoryStore
+            .currentLifeRecords(lifeID: LifeID(rawValue: generationId))
+            .filter { $0.dayIndexInLife.rawValue < dayIndex }
+            .compactMap(\.picoGenomeAfter)
+            .last
+        let worldInput = worldInputService.worldInput
+        let participation = WorldParticipationEngine(snapshotDatabase: photoSnapshotDatabase)
+            .participation(for: generationId)
+        let activeBeatIDs = activeStoryBeatIds
 
         Task(priority: .userInitiated) {
             let visionLabels = await PhotoClassificationPipeline.classify(image: image, topN: 20)
-            let rawTuples = visionLabels.map { ($0.identifier, $0.confidence) }
-            let backgroundColor = PhotoTraitSnapshotDatabase.extractBackgroundColor(from: image)
-            let output = PhotoClassificationPipeline.resolve(
-                from: rawTuples,
-                dominantColor: Self.hsbColor(from: backgroundColor),
-                dayIndex: dayIndex,
-                previousGenerationDay1FormId: previousGenerationFirstFormId,
-                lastChosenFormId: latestFormId > 0 ? latestFormId : nil
-            )
-            let render = PicoFormRenderer.render(
-                generationId: generationId,
-                dayIndex: dayIndex,
-                chosenFormId: output.chosenFormId,
-                existingSnapshots: existing
-            )
             let palette = PhotoTraitSnapshotDatabase.extractPalette(from: image, targetCount: 6)
-            let dayKey = "\(generationId)_day\(dayIndex)"
-            let snapshot = PhotoTraitSnapshot(
-                dayKey: dayKey,
-                generationId: generationId,
-                dayIndex: dayIndex,
-                rawVisionTopN: output.rawVisionTopN,
-                normalizedLabels: output.normalizedLabels,
-                matchedClusterScores: output.matchedClusterScores,
-                chosenFormId: output.chosenFormId,
-                replacedParts: render.replacedParts,
-                colorPalette: palette,
-                timestamp: Date()
+            let result = DailyCaptureOrchestrator().run(
+                input: DailyCaptureOrchestratorInput(
+                    capturedPhoto: image,
+                    rawVisionLabels: visionLabels,
+                    colorPalette: palette,
+                    localDate: Date(),
+                    progress: progress,
+                    existingSnapshots: existing,
+                    previousGenome: previousGenome,
+                    worldInput: worldInput,
+                    participation: participation,
+                    activeStoryBeatIDs: activeBeatIDs,
+                    languageCode: languageCode,
+                    isNightClosure: false
+                )
             )
+            let output = result.classificationOutput
+            let render = result.renderResult
+            let snapshot = result.photoSnapshot
+            let dayKey = snapshot.dayKey
+            let backgroundColor = palette.first
+            let traceLines = PicodTodayTraceText.lines(
+                seedMatch: result.seedMatch,
+                evolution: result.evolutionDecision,
+                mapMood: result.mapMood,
+                storyBundle: result.storyBundle,
+                palette: palette,
+                languageCode: languageCode
+            )
+            let duplicateTraceLines = PicodTodayTraceText.duplicateLines(languageCode: languageCode)
 
             await MainActor.run {
                 let inserted = photoSnapshotDatabase.insert(snapshot)
@@ -1231,18 +1573,13 @@ struct ContentView: View {
                     latestMapTintHex = constrainedMapTintHex(from: palette) ?? ""
                     latestCompanionBackgroundHex = hexString(from: backgroundColor)
                     dayCount = progress.absoluteDayIndex
-                    captureFeedbackText = languageCode == "zh"
-                        ? "今日形态已更新 #\(output.chosenFormId)"
-                        : "form updated #\(output.chosenFormId)"
+                    showCaptureTrace(traceLines)
+                    petStatusText = traceLines.first ?? (languageCode == "zh"
+                        ? "Pico 收下了今天的一点痕迹。"
+                        : "Pico kept a small trace from today.")
                     if DevTestMode.useFullTestMap && !DevTestMode.showObjectGalleryDebug {
                         configureDevTestWorld()
                         worldSimulation.start(languageCode: languageCode, reduceMotion: reduceMotion)
-                    }
-                    Task { @MainActor in
-                        try? await Task.sleep(nanoseconds: 1_400_000_000)
-                        withAnimation(.easeOut(duration: 0.16)) {
-                            captureFeedbackText = nil
-                        }
                     }
                 } else if let latest = photoSnapshotDatabase
                     .snapshots(for: generationId)
@@ -1268,21 +1605,31 @@ struct ContentView: View {
                         latestCompanionBackgroundHex = dominantHex(from: latest.colorPalette) ?? ""
                     }
                     dayCount = progress.absoluteDayIndex
-                    captureFeedbackText = languageCode == "zh"
-                        ? "今天已拍过，保持 #\(latest.chosenFormId)"
-                        : "already captured today, keeping #\(latest.chosenFormId)"
-                    Task { @MainActor in
-                        try? await Task.sleep(nanoseconds: 1_200_000_000)
-                        withAnimation(.easeOut(duration: 0.16)) {
-                            captureFeedbackText = nil
-                        }
-                    }
+                    showCaptureTrace(duplicateTraceLines, duration: 3_000_000_000)
+                    petStatusText = duplicateTraceLines.first ?? (languageCode == "zh"
+                        ? "今天的照片已经保存。"
+                        : "Today's photo is already saved.")
                 }
 
                 photoDebugOutput = output
                 latestRenderResult = render
-                appendPhotoPipelineLog(output: output, inserted: inserted)
+                appendPhotoPipelineLog(inserted: inserted, traceLines: inserted ? traceLines : duplicateTraceLines)
                 rebuildWorldSeedDebug(generationId: generationId, dayKey: dayKey, calendarDayKey: calendarDayKey)
+                if inserted {
+                    let savedWorldSeed = worldSeedDatabase.load(generationId: generationId)
+                    let savedRecord = memoryStore.recordDailyCapture(
+                        progress: progressStore.currentRecord ?? progress,
+                        snapshot: snapshot,
+                        seedMatch: result.seedMatch,
+                        evolution: result.evolutionDecision,
+                        worldSeed: savedWorldSeed,
+                        storyBundle: result.storyBundle,
+                        mapMood: result.mapMood,
+                        createdAt: Date()
+                    )
+                    runLifecycleReconciliation(reason: "capture")
+                    print("[PicodMemory] saved daily record \(savedRecord.id)")
+                }
             }
         }
     }
@@ -1501,16 +1848,16 @@ struct ContentView: View {
         return PhotoPaletteColor(red: Double(r), green: Double(g), blue: Double(b), alpha: Double(a))
     }
 
-    private func appendPhotoPipelineLog(output: PhotoClassificationPipelineOutput, inserted: Bool) {
+    private func appendPhotoPipelineLog(inserted: Bool, traceLines: [String]) {
         let text: String
         if languageCode == "zh" {
             text = inserted
-                ? "今日形态已更新：#\(output.chosenFormId)。"
-                : "今天已经拍过照，保持当前形态（#\(output.chosenFormId)）。"
+                ? (traceLines.first ?? "今日照片留下了一点痕迹。")
+                : "今天的照片已经保存，Pico 会守到明天。"
         } else {
             text = inserted
-                ? "today's form updated: #\(output.chosenFormId)."
-                : "already captured today, keeping current form (#\(output.chosenFormId))."
+                ? (traceLines.first ?? "today's photo left a small trace.")
+                : "today's photo is already saved; Pico will keep it until tomorrow."
         }
 
         logEntries.append(PetLogEntry(timestamp: Date(), message: text, type: .interaction))
@@ -1594,6 +1941,26 @@ struct ContentView: View {
     }
 }
 
+private struct SideStoryHandleView: View {
+    var body: some View {
+        ZStack {
+            UnevenRoundedRectangle(
+                topLeadingRadius: 18,
+                bottomLeadingRadius: 18,
+                bottomTrailingRadius: 0,
+                topTrailingRadius: 0,
+                style: .continuous
+            )
+            .fill(Color.picod_ink2.opacity(0.72))
+
+            Image(systemName: "chevron.left")
+                .font(.system(size: 31, weight: .bold))
+                .foregroundStyle(Color.picod_paper)
+        }
+        .frame(width: 58, height: 118)
+    }
+}
+
 private struct StorylineSheetView: View {
     let title: String
     let subtitle: String
@@ -1671,6 +2038,40 @@ private struct EmptyWorldPatternView: View {
             }
         }
         .allowsHitTesting(false)
+    }
+}
+
+private struct TodayTraceToastView: View {
+    let title: String
+    let lines: [String]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(PicodFont.monoBold(11))
+                .tracking(1.6)
+                .foregroundStyle(Color.picod_paper.opacity(0.82))
+                .textCase(.uppercase)
+
+            ForEach(Array(lines.prefix(3).enumerated()), id: \.offset) { _, line in
+                Text(line)
+                    .font(PicodFont.mono(12))
+                    .foregroundStyle(Color.picod_paper)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.82)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 9)
+        .frame(maxWidth: 292, alignment: .leading)
+        .background(Color.picod_ink.opacity(0.92))
+        .clipShape(RoundedRectangle(cornerRadius: 4))
+        .overlay(
+            RoundedRectangle(cornerRadius: 4)
+                .stroke(Color.picod_paper.opacity(0.18), lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(0.12), radius: 10, x: 0, y: 4)
     }
 }
 

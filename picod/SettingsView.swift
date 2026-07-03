@@ -2,11 +2,13 @@ import SwiftUI
 
 struct SettingsView: View {
     let onClose: () -> Void
-    let onInitialize: () -> Void
 
     @AppStorage("pref_language") private var language = "en"
     @AppStorage("pref_time_format") private var timeFormat = "24h"
     @AppStorage("pref_reduce_motion") private var reduceMotion = false
+    #if DEBUG
+    @State private var p0DebugSummary: PicodP0DebugSummary?
+    #endif
 
     private var isChinese: Bool {
         language == "zh"
@@ -41,7 +43,7 @@ struct SettingsView: View {
                 .padding(.top, 10)
                 .padding(.bottom, 12)
 
-            ScrollView {
+            ScrollView(.vertical, showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 0) {
                     settingRow(title: isChinese ? "语言" : "Language") {
                         optionGrid(
@@ -71,44 +73,116 @@ struct SettingsView: View {
                         )
                     }
 
-                    VStack(alignment: .leading, spacing: 8) {
-                        Button(action: onInitialize) {
-                            Text("initialize")
-                                .font(PicodFont.monoBold(14))
-                                .foregroundStyle(Color.picod_paper)
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 40)
-                                .background(Color.black)
-                                .overlay {
-                                    RoundedRectangle(cornerRadius: 3)
-                                        .stroke(Color.picod_ink.opacity(0.9), lineWidth: 1)
-                                }
-                        }
-                        .buttonStyle(.plain)
-                        .padding(.bottom, 6)
+                    #if DEBUG
+                    divider
 
-                        Text(isChinese
-                             ? "picod 是一个安静的陪伴者，记录每一天细小的观察。"
-                             : "picod is a quiet companion for everyday observations.")
-                            .font(PicodFont.mono(adjusted(15.4)))
-                            .foregroundStyle(aboutColor)
-                            .lineSpacing(isChinese ? 3.2 : 2.6)
+                    debugBlock
+                    #endif
 
-                        Text(versionText)
-                            .font(PicodFont.mono(12))
-                            .foregroundStyle(versionInk)
-                            .kerning(0.4)
-                    }
-                    .padding(.horizontal, 8)
-                    .padding(.top, 44)
-                    .padding(.bottom, 8)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    divider
+                        .padding(.top, 4)
+
+                    noteBlock(
+                        title: isChinese ? "-- 隐私 --" : "-- PRIVACY --",
+                        body: isChinese
+                            ? "照片只用于生成当天的 pico 形态与记录线索。日记、互动、照片摘要和 49 天进度保存在本机 app 容器中。"
+                            : "Photos are used to generate the day's pico form and record cues. Diary entries, interactions, photo summaries, and the 49-day progress live in this app's local container."
+                    )
+
+                    divider
+
+                    aboutBlock
                 }
                 .padding(.horizontal, 16)
                 .padding(.bottom, 72)
             }
         }
         .background(Color.picod_paper)
+    }
+
+    private var aboutBlock: some View {
+        noteBlock(
+            title: isChinese ? "-- 关于 --" : "-- ABOUT --",
+            body: isChinese
+                ? "picod 是一个安静的陪伴者，记录每一天细小的观察。\n视觉系统由像素网格、系统符号和可商用素材组成。\n\(versionText)"
+                : "picod is a quiet companion for everyday observations.\nThe visual system uses pixel grids, system symbols, and commercially usable assets.\n\(versionText)",
+            tint: aboutColor,
+            footerTint: versionInk
+        )
+    }
+
+    #if DEBUG
+    private var debugBlock: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(isChinese ? "-- 调试 --" : "-- DEBUG --")
+                .font(PicodFont.mono(14))
+                .tracking(2)
+                .foregroundStyle(Color.picod_ink2)
+
+            Button {
+                let summary = PicodP0DebugScenarios.runSummary()
+                p0DebugSummary = summary
+            } label: {
+                Text(isChinese ? "运行 P0 验收" : "RUN P0 CHECKS")
+                    .font(PicodFont.monoBold(13))
+                    .foregroundStyle(Color.picod_paper)
+                    .frame(maxWidth: .infinity, minHeight: 38)
+                    .background(selectedFill)
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 3)
+                            .stroke(Color.picod_ink.opacity(0.84), lineWidth: 1.5)
+                    }
+            }
+            .buttonStyle(.plain)
+
+            if let summary = p0DebugSummary {
+                VStack(alignment: .leading, spacing: 5) {
+                    Text("passed \(summary.passedScenarioCount) / failed \(summary.failedScenarioCount)")
+                    Text("daily \(summary.generatedDailyLifeRecordsCount) · albums \(summary.generatedLifeAlbumsCount) · cycles \(summary.generatedCycleRecordsCount)")
+                    Text("cards \(summary.generatedStoryCardsCount) · eras \(summary.generatedEraMemoriesCount)")
+                }
+                .font(PicodFont.mono(11.5))
+                .foregroundStyle(Color.picod_ink2)
+                .lineLimit(2)
+                .minimumScaleFactor(0.85)
+            }
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 16)
+    }
+    #endif
+
+    private func noteBlock(
+        title: String,
+        body: String,
+        tint: Color = Color.picod_ink2,
+        footerTint: Color? = nil
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(PicodFont.mono(14))
+                .tracking(2)
+                .foregroundStyle(Color.picod_ink2)
+
+            HStack(alignment: .top, spacing: 10) {
+                Rectangle()
+                    .fill(Color.picod_ink)
+                    .frame(width: 3)
+                    .frame(maxHeight: .infinity)
+
+                VStack(alignment: .leading, spacing: 7) {
+                    ForEach(Array(body.split(separator: "\n", omittingEmptySubsequences: false).enumerated()), id: \.offset) { index, line in
+                        Text(String(line))
+                            .font(PicodFont.mono(index == 2 ? 12 : adjusted(12.8)))
+                            .foregroundStyle(index == 2 ? (footerTint ?? tint) : tint)
+                            .lineSpacing(isChinese ? 3.2 : 2.8)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+            }
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 18)
     }
 
     private var divider: some View {
@@ -169,6 +243,6 @@ struct SettingsView: View {
 }
 
 #Preview {
-    SettingsView(onClose: {}, onInitialize: {})
+    SettingsView(onClose: {})
         .frame(width: 390, height: 420)
 }
