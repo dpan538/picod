@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct ObjectGalleryDebugView: View {
+    @State private var selectedProjectionScenario: WorldProjectionDebugScenarioID = .day1WarmIndoorCapture
+
     private let columns = [
         GridItem(.flexible(), spacing: 12),
         GridItem(.flexible(), spacing: 12),
@@ -9,6 +11,7 @@ struct ObjectGalleryDebugView: View {
 
     private let validation = WorldMapValidator.validate(TestMapFactory.devMap(context: DevTestMode.worldGenerationContext))
     private let richnessAudit = WorldMapRichnessAuditor.auditAllReviewMaps(context: DevTestMode.worldGenerationContext)
+    private let projectionPreviewReports = WorldProjectionDebugScenarios.allReports(context: DevTestMode.worldGenerationContext)
     private let entries: [ObjectGalleryEntry] = PropKind.allCases.map { .prop($0) } + AnimalKind.allCases.map { .animal($0) }
 
     var body: some View {
@@ -16,6 +19,13 @@ struct ObjectGalleryDebugView: View {
             WorldRichnessAuditDebugPanel(audit: richnessAudit)
                 .padding(.horizontal, 12)
                 .padding(.top, 12)
+
+            WorldProjectionPreviewDebugView(
+                reports: projectionPreviewReports,
+                selectedID: $selectedProjectionScenario
+            )
+            .padding(.horizontal, 12)
+            .padding(.top, 8)
 
             WorldValidationDebugPanel(report: validation)
                 .padding(.horizontal, 12)
@@ -52,6 +62,240 @@ struct ObjectGalleryDebugView: View {
             .padding(12)
         }
         .background(Color.picod_paper2)
+    }
+}
+
+private struct WorldProjectionPreviewDebugView: View {
+    let reports: [WorldProjectionDebugScenarioReport]
+    @Binding var selectedID: WorldProjectionDebugScenarioID
+
+    private var selectedReport: WorldProjectionDebugScenarioReport {
+        reports.first { $0.id == selectedID } ?? reports[0]
+    }
+
+    private let metricColumns = [
+        GridItem(.flexible(), spacing: 6),
+        GridItem(.flexible(), spacing: 6),
+        GridItem(.flexible(), spacing: 6)
+    ]
+
+    var body: some View {
+        let report = selectedReport
+
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .firstTextBaseline) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("WORLD PROJECTION PREVIEW")
+                        .font(PicodFont.monoBold(11))
+                        .foregroundStyle(Color.picod_ink)
+                    Text("DEBUG synthetic memory -> WorldStateProjection")
+                        .font(PicodFont.mono(9))
+                        .foregroundStyle(Color.picod_ink2)
+                }
+
+                Spacer()
+
+                Text(report.validation.didPassCoreRules ? "CORE OK" : "ERROR")
+                    .font(PicodFont.monoBold(9))
+                    .foregroundStyle(Color.picod_paper)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(report.validation.didPassCoreRules ? Color.picod_ink : Color(hex: "9A4B3A"))
+            }
+
+            Picker("Scenario", selection: $selectedID) {
+                ForEach(WorldProjectionDebugScenarioID.allCases) { scenario in
+                    Text(scenario.title).tag(scenario)
+                }
+            }
+            .pickerStyle(.menu)
+            .font(PicodFont.mono(10))
+            .tint(Color.picod_ink)
+
+            WorldProjectionRenderedPreview(report: report)
+                .frame(height: 260)
+                .background(Color(hex: "D8DDCA"))
+                .overlay(Rectangle().stroke(Color.picod_ink.opacity(0.22), lineWidth: 1))
+
+            LazyVGrid(columns: metricColumns, spacing: 6) {
+                WorldValidationMetric(title: "MAP", value: report.mapVariantID)
+                WorldValidationMetric(title: "ELEMENTS", value: "\(report.projectedElementCount)")
+                WorldValidationMetric(title: "EVIDENCE", value: "\(report.sourceEvidenceCount)")
+                WorldValidationMetric(title: "STORY", value: "\(report.storyEchoCount)")
+                WorldValidationMetric(title: "CYCLE", value: "\(report.cycleMarkerCount)")
+                WorldValidationMetric(title: "ERA", value: "\(report.eraEchoCount)")
+                WorldValidationMetric(title: "ERRORS", value: "\(report.validation.errorCount)")
+                WorldValidationMetric(title: "WARNINGS", value: "\(report.validation.warningCount)")
+                WorldValidationMetric(title: "HIGH+", value: "\(report.highPriorityActionCount)")
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("EXPECTATION")
+                    .font(PicodFont.monoBold(9))
+                    .foregroundStyle(Color.picod_ink)
+                Text(report.id.visualExpectation)
+                    .font(PicodFont.mono(8))
+                    .foregroundStyle(Color.picod_ink2)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text(report.signalBundle.debugSummary)
+                    .font(PicodFont.mono(8))
+                    .foregroundStyle(Color.picod_ink2.opacity(0.78))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            if report.projection.allElements.isEmpty {
+                Text("No projected elements for this scenario.")
+                    .font(PicodFont.mono(9))
+                    .foregroundStyle(Color.picod_ink2)
+            } else {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("PROJECTED ELEMENTS")
+                        .font(PicodFont.monoBold(9))
+                        .foregroundStyle(Color.picod_ink)
+                    ForEach(report.projection.allElements.prefix(8)) { element in
+                        WorldProjectedElementRow(element: element)
+                    }
+                    if report.projection.allElements.count > 8 {
+                        Text("+ \(report.projection.allElements.count - 8) more")
+                            .font(PicodFont.mono(8))
+                            .foregroundStyle(Color.picod_ink2.opacity(0.72))
+                    }
+                }
+            }
+
+            if !report.storyEchoElements.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("STORY ECHOES")
+                        .font(PicodFont.monoBold(9))
+                        .foregroundStyle(Color.picod_ink)
+                    ForEach(report.storyEchoElements) { element in
+                        WorldProjectedElementRow(element: element)
+                    }
+                }
+            }
+
+            if !report.actions.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("WARNINGS / ACTIONS")
+                        .font(PicodFont.monoBold(9))
+                        .foregroundStyle(Color.picod_ink)
+                    ForEach(report.actions.prefix(6)) { action in
+                        WorldRichnessActionRow(action: action)
+                    }
+                    if report.actions.count > 6 {
+                        Text("+ \(report.actions.count - 6) more")
+                            .font(PicodFont.mono(8))
+                            .foregroundStyle(Color.picod_ink2.opacity(0.72))
+                    }
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(Color.picod_paper)
+        .overlay(Rectangle().stroke(Color.picod_ink.opacity(0.24), lineWidth: 1))
+    }
+}
+
+private struct WorldProjectionRenderedPreview: View {
+    let report: WorldProjectionDebugScenarioReport
+
+    var body: some View {
+        ZStack {
+            MapView(
+                tileSize: 8,
+                testMap: report.baseMap,
+                showPetSpawn: true,
+                petCoord: report.baseMap.petSpawn.coord,
+                runtimeProps: report.placementPlan.projectedProps,
+                runtimeAnimals: report.placementPlan.projectedAnimals,
+                weatherCondition: weatherCondition,
+                humidityPercent: humidityPercent,
+                animateAmbient: false
+            )
+
+            WorldProjectionMarkerOverlay(report: report)
+                .allowsHitTesting(false)
+        }
+        .clipped()
+    }
+
+    private var weatherCondition: WeatherCondition {
+        switch report.projection.weatherLayer {
+        case .clear: return .sunny
+        case .cloudy: return .partlyCloudy
+        case .rain: return .rainy
+        case .fog: return .foggy
+        case .snow: return .snowy
+        case .unknown: return .unknown
+        }
+    }
+
+    private var humidityPercent: Int {
+        report.projection.weatherLayer == .rain ? 78 : 56
+    }
+}
+
+private struct WorldProjectionMarkerOverlay: View {
+    let report: WorldProjectionDebugScenarioReport
+
+    var body: some View {
+        Canvas { ctx, size in
+            let map = report.baseMap
+            let tile = min(size.width / CGFloat(map.width), size.height / CGFloat(map.height))
+            let mapW = CGFloat(map.width) * tile
+            let mapH = CGFloat(map.height) * tile
+            let origin = CGPoint(x: (size.width - mapW) / 2, y: (size.height - mapH) / 2)
+            let spawn = mapCenter(report.projection.picoAccessibilityZone.spawn, origin: origin, tile: tile)
+
+            if let target = report.projection.picoAccessibilityZone.preferredRouteTarget {
+                let targetPoint = mapCenter(target, origin: origin, tile: tile)
+                var path = Path()
+                path.move(to: spawn)
+                path.addLine(to: targetPoint)
+                ctx.stroke(path, with: .color(Color.picod_paper.opacity(0.72)), style: StrokeStyle(lineWidth: max(1, tile * 0.16), dash: [tile * 0.42, tile * 0.24]))
+            }
+
+            let spawnRect = CGRect(x: spawn.x - tile * 0.32, y: spawn.y - tile * 0.32, width: tile * 0.64, height: tile * 0.64)
+            ctx.fill(Path(ellipseIn: spawnRect), with: .color(Color.picod_paper.opacity(0.9)))
+            ctx.stroke(Path(ellipseIn: spawnRect), with: .color(Color.picod_ink), lineWidth: max(1, tile * 0.08))
+
+            for element in report.projection.allElements {
+                let point = mapCenter(element.tileOrAnchor, origin: origin, tile: tile)
+                let radius = markerRadius(for: element, tile: tile)
+                let rect = CGRect(x: point.x - radius, y: point.y - radius, width: radius * 2, height: radius * 2)
+                let path = Path(ellipseIn: rect)
+                ctx.fill(path, with: .color(markerColor(for: element).opacity(0.76)))
+                ctx.stroke(path, with: .color(Color.picod_ink.opacity(0.7)), lineWidth: max(1, tile * 0.06))
+            }
+        }
+    }
+
+    private func mapCenter(_ coord: MapCoord, origin: CGPoint, tile: CGFloat) -> CGPoint {
+        CGPoint(
+            x: origin.x + (CGFloat(coord.x) + 0.5) * tile,
+            y: origin.y + (CGFloat(coord.y) + 0.5) * tile
+        )
+    }
+
+    private func markerRadius(for element: WorldProjectedElement, tile: CGFloat) -> CGFloat {
+        switch element.visualPriority {
+        case .background, .low: return max(3, tile * 0.24)
+        case .medium: return max(4, tile * 0.31)
+        case .high: return max(5, tile * 0.38)
+        }
+    }
+
+    private func markerColor(for element: WorldProjectedElement) -> Color {
+        switch element.source {
+        case .photoMood: return Color(hex: "D9B84F")
+        case .picoEvolution: return Color(hex: "8BAE62")
+        case .storyTrace: return Color(hex: "9A6F9C")
+        case .cycleRecord: return Color(hex: "C66A4A")
+        case .eraMemory: return Color(hex: "F0E8C0")
+        case .participation: return Color(hex: "77836A")
+        case .baseMap: return Color.picod_ink2
+        }
     }
 }
 

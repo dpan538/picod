@@ -44,7 +44,14 @@ enum DevTestMode {
     /// `false` 时预览 **直接** 用占位图（省一次生成）。正式 `Run` 不受此项影响；非 Preview 下失败仍会 `fatalError`。
     static let renderFullMapInXcodePreview = true
     // Toggle to inspect single-object readability before returning to full-map iteration.
-    static let showObjectGalleryDebug = false
+    static var showObjectGalleryDebug: Bool {
+        #if DEBUG
+        return environment["PICOD_SHOW_OBJECT_GALLERY_DEBUG"] == "1" ||
+            environment["PICOD_SHOW_WORLD_PROJECTION_PREVIEW"] == "1"
+        #else
+        return false
+        #endif
+    }
     static let showMockSeed = false
     static let runPhotoPipelineMockValidation = false
     static let showPhotoPipelineDebug = false

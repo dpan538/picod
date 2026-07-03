@@ -102,6 +102,71 @@ Remaining warnings are still actionable backlog, not ignored noise:
 - wetland projected animal habitat warnings for future projection placement
   tuning
 
+## P1D Projection Preview Baseline
+
+P1D adds a DEBUG-only visual preview for memory-driven projection scenarios.
+The preview uses deterministic synthetic memory signals and the same
+`WorldStateProjector`, `WorldProjectionMapAdapter`, and `WorldMapValidator`
+path used by the audit. Normal `MapView` behavior remains unchanged.
+
+P1D does not change the audit totals:
+
+- static maps: 5
+- projection scenarios: 10
+- total errors: 0
+- total warnings: 320
+- total actions: 320
+- high actions: 55
+
+Preview-only scenarios available in the DEBUG UI:
+
+- `freshDay1Empty`
+- `day1WarmIndoorCapture`
+- `day4RainyUmbrellaTrace`
+- `day5NightLamplighterTrace`
+- `day7MirrorClosure`
+- `completedLifeAlbum`
+- `completedCycleRecord`
+- `lowParticipationLife`
+- `lockedEraMemory`
+- `unlockedEraMemory`
+
+Post-P1D warning classification:
+
+- Route readability polish: high-priority warnings around common Pico routes.
+- Visual occlusion risk: tall trees/structures near spawn or route bands.
+- Density imbalance: perimeter forest sparse warnings in some map variants.
+- Habitat mismatch: wetland projection animal/visitor placement needs tuning.
+- Decorative grounding: terrain mismatch under non-critical props.
+- Building/path connection: disconnected structures and missing approach tiles.
+- Validator threshold: no known false-positive blockers; thresholds should be
+  reviewed only after visual preview captures are compared.
+- Projection placement refinement: story/cycle/era placement is valid but still
+  needs visual taste passes before production rendering.
+
+Top 10 P1E candidates:
+
+1. Reduce `aprilDense` route occlusion around `x10 y22`.
+2. Reduce `aprilDense` route occlusion around `x12 y19`.
+3. Reduce `aprilDense` spawn occlusion around `x10 y22`.
+4. Reduce `forestShrine` route occlusion around `x17 y21`.
+5. Reduce `forestShrine` route occlusion around `x18 y25`.
+6. Reduce `forestShrine` spawn occlusion around `x10 y22`.
+7. Reduce `wetlandLantern` spawn/route occlusion near the lower-left path.
+8. Reduce `nightGrove` route occlusion near the lamplighter path.
+9. Add approach tiles for shrine/structure props that still feel disconnected.
+10. Tune wetland projected animal habitat without weakening water-edge mood.
+
+Warnings intentionally deferred:
+
+- All 55 high actions remain visible; none were downgraded.
+- Perimeter forest sparse warnings are deferred until visual density goals are
+  balanced against Pico route readability.
+- Terrain mismatch warnings are deferred unless they affect route clarity,
+  story trace grounding, or Pico readability.
+- Projection placement refinement waits for P1D/P1E visual comparison rather
+  than speculative map churn.
+
 ## Projection Scenario Coverage
 
 Audited scenarios:
@@ -180,3 +245,4 @@ Observed result:
 
 - P1B baseline: `static maps 5 / projection scenarios 10 / errors 26 / warnings 366 / actions 392 / high 113`
 - P1C current: `static maps 5 / projection scenarios 10 / errors 0 / warnings 320 / actions 320 / high 55`
+- P1D current: `static maps 5 / projection scenarios 10 / errors 0 / warnings 320 / actions 320 / high 55`

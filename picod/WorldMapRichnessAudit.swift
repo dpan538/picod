@@ -271,7 +271,7 @@ enum WorldMapRichnessAuditor {
         )
     }
 
-    private static func actions(
+    static func actions(
         for report: WorldMapValidationReport,
         variantID: String
     ) -> [WorldRichnessAction] {
