@@ -114,11 +114,12 @@ struct MapView: View {
 
         let props = runtimeProps.isEmpty ? map.props : runtimeProps
         let animals = runtimeAnimals.isEmpty ? map.animals : runtimeAnimals
+        let ambientVisitors = ambientVisitorLayers(for: map, time: time)
         var layers: [RenderableObject] = []
         layers.reserveCapacity(props.count + animals.count + 6)
         for p in props { layers.append(.prop(p)) }
         for a in animals { layers.append(.animal(a)) }
-        layers.append(contentsOf: ambientVisitorLayers(for: map, time: time))
+        layers.append(contentsOf: ambientVisitors)
         if let active = petCoord {
             layers.append(.pet(active))
         } else if showPetSpawn {
@@ -139,6 +140,13 @@ struct MapView: View {
         drawClimateOverlay(ctx: &ctx, rect: CGRect(x: origin.x, y: origin.y, width: mapW, height: mapH), tile: tile, time: time)
         drawAmbientOverlay(ctx: &ctx, rect: CGRect(x: origin.x, y: origin.y, width: mapW, height: mapH))
         drawAmbientSignalBubbles(ctx: &ctx, map: map, origin: origin, tile: tile, time: time)
+        drawAnimalSignalBubbles(
+            for: animals + ambientVisitors.compactMap(\.animalPlacement),
+            origin: origin,
+            tile: tile,
+            time: time,
+            ctx: &ctx
+        )
     }
 
     private func drawAmbientOverlay(ctx: inout GraphicsContext, rect: CGRect) {
@@ -358,17 +366,17 @@ struct MapView: View {
         let phase = Double(noise(coord.x, coord.y, kind.rawValue.count + 41)) * 0.01
         switch kind {
         case .bird, .butterfly, .forestSpirit, .toriiBetweenLight, .nightLamplighter:
-            let dx = CGFloat(sin(time * 1.0 + phase)) * tile * 0.12
-            let dy = CGFloat(cos(time * 1.4 + phase)) * tile * 0.10
+            let dx = CGFloat(sin(time * 1.0 + phase)) * tile * 0.34
+            let dy = CGFloat(cos(time * 1.4 + phase)) * tile * 0.22
             let glow: CGFloat = kind == .bird ? 0 : 0.08 + CGFloat((sin(time * 1.6 + phase) + 1) * 0.08)
             return SpriteMotion(offset: CGSize(width: dx, height: dy), glowOpacity: glow, glowColor: Color(hex: "F0E8C0"))
         case .duck, .fishShadow:
-            let dx = CGFloat(sin(time * 0.65 + phase)) * tile * 0.16
-            let dy = CGFloat(cos(time * 0.8 + phase)) * tile * 0.04
+            let dx = CGFloat(sin(time * 0.65 + phase)) * tile * 0.30
+            let dy = CGFloat(cos(time * 0.8 + phase)) * tile * 0.10
             return SpriteMotion(offset: CGSize(width: dx, height: dy))
         case .frog, .rabbit, .cat, .dog, .deer, .snail, .cow, .sheep, .horse:
-            let dx = CGFloat(sin(time * 0.5 + phase)) * tile * 0.07
-            let dy = CGFloat(cos(time * 0.9 + phase)) * tile * 0.035
+            let dx = CGFloat(sin(time * 0.5 + phase)) * tile * 0.22
+            let dy = CGFloat(cos(time * 0.9 + phase)) * tile * 0.08
             return SpriteMotion(offset: CGSize(width: dx, height: dy))
         case .child, .shrineMaiden, .caretaker, .fisher, .edgeTraveler, .truckDriver,
                 .lostBackpacker, .umbrellaWoman, .doorKnocker, .mirrorMiko:
@@ -394,7 +402,7 @@ struct MapView: View {
             return 0.48
         case .partlyCloudy, .snowy:
             return 0.36
-        case .sunny:
+        case .sunny, .unknown:
             return 0.24
         case .night:
             return 0.18
@@ -451,6 +459,8 @@ struct MapView: View {
             drawMistBands(ctx: &ctx, rect: rect, tile: tile, time: time, opacity: 0.09)
         case .night:
             drawMistBands(ctx: &ctx, rect: rect, tile: tile, time: time, opacity: 0.05)
+        case .unknown:
+            break
         }
 
         drawWaterGlints(ctx: &ctx, rect: rect, tile: tile, time: time)
@@ -588,6 +598,41 @@ struct MapView: View {
         }
     }
 
+    private func drawAnimalSignalBubbles(for animals: [AnimalPlacement], origin: CGPoint, tile: CGFloat, time: TimeInterval, ctx: inout GraphicsContext) {
+        guard animateAmbient else { return }
+        let candidates = animals.filter { shouldShowSignalBubble(for: $0.kind) }
+        guard !candidates.isEmpty else { return }
+
+        let slot = Int(time / 4.8)
+        guard slot % 3 != 2 else { return }
+
+        let animal = candidates[abs(slot) % candidates.count]
+        drawSignalBubble(signalBubbleText(for: animal.kind, slot: slot), coord: animal.coord, origin: origin, tile: tile, ctx: &ctx)
+    }
+
+    private func shouldShowSignalBubble(for kind: AnimalKind) -> Bool {
+        switch kind {
+        case .fishShadow:
+            return weatherCondition == .rainy || weatherCondition == .foggy || humidityPercent >= 65
+        default:
+            return true
+        }
+    }
+
+    private func signalBubbleText(for kind: AnimalKind, slot: Int) -> String {
+        switch kind {
+        case .bird, .butterfly:
+            return slot.isMultiple(of: 2) ? "!" : "..."
+        case .duck, .frog, .fishShadow:
+            return "..."
+        case .forestSpirit, .toriiBetweenLight, .nightLamplighter,
+             .lostBackpacker, .umbrellaWoman, .doorKnocker, .mirrorMiko:
+            return "?"
+        default:
+            return slot.isMultiple(of: 2) ? "..." : "?"
+        }
+    }
+
     private func drawSignalBubble(_ text: String, coord: MapCoord, origin: CGPoint, tile: CGFloat, ctx: inout GraphicsContext) {
         let anchor = CGPoint(x: origin.x + (CGFloat(coord.x) + 0.5) * tile, y: origin.y + CGFloat(coord.y) * tile)
         let width = max(tile * 1.7, CGFloat(text.count) * tile * 0.68 + tile * 0.9)
@@ -637,6 +682,7 @@ struct MapView: View {
             tileFootprint: referenceFootprint,
             palette: palette,
             pixels: pixels,
+            hasShadow: true,
             shadowOpacity: 0.26,
             preservesPixelAspect: true,
             pixelScale: referenceScale
@@ -852,11 +898,17 @@ private enum RenderableObject {
     case prop(PropPlacement); case animal(AnimalPlacement); case pet(MapCoord)
     var sortY: Int { switch self { case .prop(let p): p.coord.y; case .animal(let a): a.coord.y; case .pet(let c): c.y } }
     var sortX: Int { switch self { case .prop(let p): p.coord.x; case .animal(let a): a.coord.x; case .pet(let c): c.x } }
+    var animalPlacement: AnimalPlacement? {
+        if case .animal(let placement) = self {
+            return placement
+        }
+        return nil
+    }
 }
 
 private struct SpriteSpec {
     let tileFootprint: CGSize; let anchor: CGPoint; let palette: [Color]; let pixels: [[UInt8]]; let hasShadow: Bool; let shadowOpacity: CGFloat; let preservesPixelAspect: Bool; let pixelScale: CGFloat
-    init(tileFootprint: CGSize, anchor: CGPoint = CGPoint(x: 0.5, y: 1.0), palette: [Color], pixels: [[UInt8]], hasShadow: Bool = true, shadowOpacity: CGFloat = 0.18, preservesPixelAspect: Bool = false, pixelScale: CGFloat = 1) {
+    init(tileFootprint: CGSize, anchor: CGPoint = CGPoint(x: 0.5, y: 1.0), palette: [Color], pixels: [[UInt8]], hasShadow: Bool = false, shadowOpacity: CGFloat = 0.18, preservesPixelAspect: Bool = false, pixelScale: CGFloat = 1) {
         self.tileFootprint = tileFootprint; self.anchor = anchor; self.palette = palette; self.pixels = pixels; self.hasShadow = hasShadow; self.shadowOpacity = shadowOpacity; self.preservesPixelAspect = preservesPixelAspect; self.pixelScale = pixelScale
     }
 }

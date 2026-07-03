@@ -165,6 +165,7 @@ enum PicodP0DebugScenarios {
                     worldInput: worldInput,
                     participation: generationParticipation(capturedDays: Set(capturedDays.filter { $0 < day })),
                     activeStoryBeatIDs: debugStoryBeatIDs(day: day),
+                    photoMetadata: nil,
                     languageCode: "en",
                     isNightClosure: false
                 )
@@ -564,6 +565,7 @@ enum PicodP0DebugScenarios {
             weather: PicodWeatherContext(
                 temperatureCelsius: nil,
                 humidityPercent: weather == .rain ? 82 : 48,
+                precipitationChance: weather == .rain ? 0.7 : 0.0,
                 condition: weather,
                 fetchedAt: date
             ),

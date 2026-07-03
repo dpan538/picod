@@ -218,7 +218,7 @@ struct NightIcon: View {
 }
 
 enum WeatherCondition {
-    case sunny, cloudy, partlyCloudy, rainy, stormy, snowy, foggy, night
+    case sunny, cloudy, partlyCloudy, rainy, stormy, snowy, foggy, night, unknown
 }
 
 extension WeatherCondition {
@@ -232,6 +232,7 @@ extension WeatherCondition {
         case .snowy: return "Snowy"
         case .foggy: return "Foggy"
         case .night: return "Night"
+        case .unknown: return "--"
         }
     }
 }
@@ -253,6 +254,7 @@ struct WeatherIcon: View {
         case .snowy: return "cloud.snow"
         case .foggy: return "cloud.fog"
         case .night: return "moon.stars"
+        case .unknown: return "cloud"
         }
     }
 }

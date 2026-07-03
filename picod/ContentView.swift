@@ -7,6 +7,7 @@ import Combine
 import SwiftUI
 import UIKit
 import AVFoundation
+import Photos
 import PhotosUI
 
 struct ContentView: View {
@@ -51,6 +52,7 @@ struct ContentView: View {
     @State private var latestRenderResult: PicoRenderResult?
     @State private var photoMockReport: PhotoPipelineMockReport?
     @State private var showCompanionDebugPanel = false
+    @State private var showingPhotoSourceDialog = false
     @State private var showingPhotoPicker = false
     @State private var selectedPhotoPickerItem: PhotosPickerItem?
     @Environment(\.scenePhase) private var scenePhase
@@ -343,7 +345,7 @@ struct ContentView: View {
                         SideStoryHandleView()
                     }
                     .buttonStyle(.plain)
-                    .offset(x: 10)
+                    .offset(x: 14)
                     .accessibilityLabel(languageCode == "zh" ? "故事信号" : "Story signals")
                     Spacer(minLength: 132)
                 }
@@ -357,6 +359,7 @@ struct ContentView: View {
                 accentHex: displayLatestMapTintHex.isEmpty ? nil : displayLatestMapTintHex,
                 diaryNarrative: displayDiaryNarrative,
                 isPresented: showLineage,
+                currentFormId: displayLatestFormId,
                 memoryStore: memoryStore,
                 languageCode: languageCode,
                 onDismiss: {
@@ -396,6 +399,9 @@ struct ContentView: View {
             if ProcessInfo.processInfo.environment["PICOD_RUN_P0_ACCEPTANCE"] == "1" {
                 let summary = PicodP0DebugScenarios.runSummary()
                 print("[PicodP0Debug] auto-run passed=\(summary.passedScenarioCount) failed=\(summary.failedScenarioCount)")
+            }
+            if DevTestMode.runWorldRichnessAudit {
+                WorldMapRichnessAuditor.printAudit()
             }
             #endif
 
@@ -451,16 +457,31 @@ struct ContentView: View {
                     showingCamera = false
                     cameraManager.stopSession()
                 },
-                onCapture: { image in
+                onCapture: { capturedPhoto in
                     showingCamera = false
                     cameraManager.stopSession()
-                    processCapturedPhoto(image)
+                    processCapturedPhoto(capturedPhoto)
                 }
             )
         }
         .photosPicker(isPresented: $showingPhotoPicker, selection: $selectedPhotoPickerItem, matching: .images)
         .onChange(of: selectedPhotoPickerItem) { _, newItem in
             handleSelectedPhotoPickerItem(newItem)
+        }
+        .confirmationDialog(
+            photoSourceDialogTitle,
+            isPresented: $showingPhotoSourceDialog,
+            titleVisibility: .visible
+        ) {
+            Button(photoSourceCameraTitle) {
+                requestCameraFlow()
+            }
+            Button(photoSourceLibraryTitle) {
+                requestPhotoLibraryFlow()
+            }
+            Button(photoSourceCancelTitle, role: .cancel) {}
+        } message: {
+            Text(photoSourceDialogMessage)
         }
         .alert(
             isPresented: Binding(
@@ -643,7 +664,7 @@ struct ContentView: View {
                     ambientCurve: ambientCurve,
                     weatherCondition: displayWeather.condition,
                     humidityPercent: displayHumidityPercent,
-                    animateAmbient: !reduceMotion
+                    animateAmbient: true
                 )
                 .frame(width: mapSize, height: mapHeight)
 
@@ -1241,6 +1262,7 @@ struct ContentView: View {
             case .snowy: label = "雪"
             case .foggy: label = "雾"
             case .night: label = "夜"
+            case .unknown: label = "--"
             }
         } else {
             switch condition {
@@ -1248,6 +1270,8 @@ struct ContentView: View {
                 label = "Clear"
             case .partlyCloudy:
                 label = "Cloudy"
+            case .unknown:
+                label = "--"
             default:
                 label = condition.title
             }
@@ -1278,7 +1302,7 @@ struct ContentView: View {
         }
 
         if appState == .empty || appState == .picoEgg || !hasPhotoToday {
-            requestCameraFlow()
+            requestDailyPhotoFlow()
             return
         }
 
@@ -1288,6 +1312,32 @@ struct ContentView: View {
             languageCode: languageCode
         )
         petStatusText = line
+    }
+
+    private var photoSourceDialogTitle: String {
+        languageCode == "zh" ? "今日照片" : "Today's photo"
+    }
+
+    private var photoSourceDialogMessage: String {
+        languageCode == "zh"
+            ? "拍一张，或从相册选一张。Pico 今天只会记住一张。"
+            : "Take one, or choose one from your library. Pico will keep one photo for today."
+    }
+
+    private var photoSourceCameraTitle: String {
+        languageCode == "zh" ? "拍照" : "Take Photo"
+    }
+
+    private var photoSourceLibraryTitle: String {
+        languageCode == "zh" ? "从相册选择" : "Choose from Library"
+    }
+
+    private var photoSourceCancelTitle: String {
+        languageCode == "zh" ? "取消" : "Cancel"
+    }
+
+    private func requestDailyPhotoFlow() {
+        showingPhotoSourceDialog = true
     }
 
     private func runInitializeReset() {
@@ -1365,14 +1415,46 @@ struct ContentView: View {
     private func handleSelectedPhotoPickerItem(_ item: PhotosPickerItem?) {
         guard let item else { return }
         Task(priority: .userInitiated) {
-            let data = try? await item.loadTransferable(type: Data.self)
+            let originalAssetData = await loadOriginalPhotoLibraryAssetData(identifier: item.itemIdentifier)
+            let data: Data?
+            if let originalAssetData {
+                data = originalAssetData
+            } else {
+                data = try? await item.loadTransferable(type: Data.self)
+            }
             await MainActor.run {
                 defer { selectedPhotoPickerItem = nil }
                 guard let data, let image = UIImage(data: data) else {
                     showCaptureTrace(PicodTodayTraceText.photoImportFailed(languageCode: languageCode))
                     return
                 }
-                processCapturedPhoto(image)
+                let baseMetadata = PhotoCaptureMetadata.fromImageData(data, source: .photoLibrary)
+                let metadata = baseMetadata.enrichedWithPhotoLibraryAsset(identifier: item.itemIdentifier)
+                processCapturedPhoto(PicodCapturedPhoto(image: image, imageData: data, metadata: metadata))
+            }
+        }
+    }
+
+    private func loadOriginalPhotoLibraryAssetData(identifier: String?) async -> Data? {
+        guard let identifier, !identifier.isEmpty else { return nil }
+        let fetchResult = PHAsset.fetchAssets(withLocalIdentifiers: [identifier], options: nil)
+        guard let asset = fetchResult.firstObject else { return nil }
+
+        let options = PHImageRequestOptions()
+        options.version = .original
+        options.deliveryMode = .highQualityFormat
+        options.resizeMode = .none
+        options.isNetworkAccessAllowed = false
+
+        return await withCheckedContinuation { continuation in
+            var didResume = false
+            PHImageManager.default().requestImageDataAndOrientation(for: asset, options: options) { data, _, _, info in
+                guard !didResume else { return }
+                let cancelled = (info?[PHImageCancelledKey] as? Bool) == true
+                let error = info?[PHImageErrorKey] as? Error
+
+                didResume = true
+                continuation.resume(returning: cancelled || error != nil ? nil : data)
             }
         }
     }
@@ -1502,7 +1584,8 @@ struct ContentView: View {
         }
     }
 
-    private func processCapturedPhoto(_ image: UIImage) {
+    private func processCapturedPhoto(_ capturedPhoto: PicodCapturedPhoto) {
+        let image = capturedPhoto.image
         let progress = syncProgressForCurrentDay(now: Date())
         let generationId = progress.generationId
         let dayIndex = progress.dayInCycle
@@ -1534,6 +1617,7 @@ struct ContentView: View {
                     worldInput: worldInput,
                     participation: participation,
                     activeStoryBeatIDs: activeBeatIDs,
+                    photoMetadata: capturedPhoto.metadata,
                     languageCode: languageCode,
                     isNightClosure: false
                 )
@@ -1945,19 +2029,25 @@ private struct SideStoryHandleView: View {
     var body: some View {
         ZStack {
             UnevenRoundedRectangle(
-                topLeadingRadius: 18,
-                bottomLeadingRadius: 18,
+                topLeadingRadius: 12,
+                bottomLeadingRadius: 12,
                 bottomTrailingRadius: 0,
                 topTrailingRadius: 0,
                 style: .continuous
             )
-            .fill(Color.picod_ink2.opacity(0.72))
+            .fill(Color.picod_ink.opacity(0.24))
+
+            Rectangle()
+                .fill(Color.picod_paper.opacity(0.36))
+                .frame(width: 2)
+                .offset(x: -8)
 
             Image(systemName: "chevron.left")
-                .font(.system(size: 31, weight: .bold))
-                .foregroundStyle(Color.picod_paper)
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(Color.picod_paper.opacity(0.72))
         }
-        .frame(width: 58, height: 118)
+        .frame(width: 34, height: 78)
+        .contentShape(Rectangle())
     }
 }
 
@@ -2079,7 +2169,7 @@ private struct CameraCaptureSheet: View {
     @ObservedObject var cameraManager: CameraManager
     let statusLine: String
     let onCancel: () -> Void
-    let onCapture: (UIImage) -> Void
+    let onCapture: (PicodCapturedPhoto) -> Void
 
     var body: some View {
         ZStack {

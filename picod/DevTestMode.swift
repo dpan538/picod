@@ -49,7 +49,14 @@ enum DevTestMode {
     static let runPhotoPipelineMockValidation = false
     static let showPhotoPipelineDebug = false
     static let enableStorySidePanel = true
-    static let previewWorkingStateWhenEmpty = true
+    static var runWorldRichnessAudit: Bool {
+        environment["PICOD_RUN_WORLD_RICHNESS_AUDIT"] == "1"
+    }
+    static var previewWorkingStateWhenEmpty: Bool {
+        environment["PICOD_PREVIEW_WORKING_STATE"] == "1" ||
+            environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1" ||
+            environment["XCODE_RUNNING_FOR_PLAYGROUNDS"] == "1"
+    }
     static let freezePreviewReferenceMovement = true
 
     static var previewFormId: Int {
@@ -62,7 +69,7 @@ enum DevTestMode {
         guard let raw = environment["PICOD_TIME_VARIANT"]?.trimmingCharacters(in: .whitespacesAndNewlines),
               !raw.isEmpty
         else {
-            return .night
+            return nil
         }
         if raw == "live" || raw == "system" || raw == "none" {
             return nil
@@ -177,7 +184,7 @@ enum DevTestMode {
             return 66
         case .snowy:
             return 74
-        case .sunny, .night:
+        case .sunny, .night, .unknown:
             return locationPreset == .watersideLike ? 72 : 59
         }
     }
@@ -234,6 +241,8 @@ private extension WeatherCondition {
             return "foggy"
         case .night:
             return "night"
+        case .unknown:
+            return "unknown"
         }
     }
 }

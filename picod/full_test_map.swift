@@ -80,7 +80,7 @@ extension TestMapFactory {
             (2, 2), (4, 1), (6, 1), (8, 1), (10, 1), (12, 1), (16, 1), (18, 1), (20, 1), (23, 2),
             (1, 5), (1, 8), (1, 11), (1, 15), (2, 20), (3, 24),
             (25, 4), (25, 7), (26, 10), (25, 14), (26, 18), (24, 22),
-            (5, 25), (7, 25), (9, 25), (11, 25), (16, 25), (19, 25), (21, 24), (23, 24)
+            (4, 25), (6, 25), (3, 22), (5, 26), (22, 25), (24, 25), (21, 24), (23, 24)
         ].enumerated() {
             prop(index.isMultiple(of: 2) ? .roundTree : .tallTree, point.0, point.1)
         }
@@ -1022,6 +1022,13 @@ extension TestMapFactory {
                 (.bigTree, 22, 10), (.roundTree, 25, 15), (.tallTree, 23, 21), (.bigTree, 25, 24),
                 (.roundTree, 1, 8), (.tallTree, 7, 3), (.bigTree, 1, 18), (.roundTree, 6, 25),
                 (.sacredEvergreen, 21, 25), (.tallPine, 26, 11), (.roundTree, 20, 2), (.bigTree, 26, 19),
+                (.roundTree, 2, 6), (.gardenPine, 8, 4), (.tallTree, 10, 2), (.sacredEvergreen, 16, 2),
+                (.bigTree, 2, 13), (.sacredEvergreen, 4, 14), (.tallPine, 7, 15), (.roundTree, 2, 21),
+                (.gardenPine, 5, 24), (.dwarfPine, 8, 25), (.roundTree, 21, 4), (.bigTree, 24, 9),
+                (.sacredEvergreen, 26, 14), (.gardenPine, 22, 16), (.tallTree, 24, 18), (.roundTree, 21, 23),
+                (.tallPine, 24, 25), (.gardenPine, 18, 25),
+                (.denseBush, 4, 6), (.denseBush, 23, 5), (.mushroomPatch, 3, 15), (.fallenLog, 22, 24),
+                (.denseBush, 6, 14), (.denseBush, 24, 13), (.mushroomPatch, 21, 24),
                 (.torii, 14, 9), (.shrineSmall, 14, 7), (.pagoda, 18, 7), (.stoneWell, 10, 10),
                 (.stoneLanternJp, 11, 8), (.stoneLanternJp, 17, 8), (.stoneLanternJp, 12, 13), (.stoneLanternJp, 17, 13),
                 (.japaneseBridge, 14, 14), (.mushroomPatch, 8, 19), (.mushroomPatch, 21, 18), (.flowerBed, 10, 16),
@@ -1076,6 +1083,13 @@ extension TestMapFactory {
                 for (xx, yy) in [(10, 10), (11, 10), (12, 11), (13, 11), (14, 12), (15, 12), (8, 13), (9, 13)] {
                     terrain.set(.deepWater, at: c(xx, yy))
                 }
+                for (xx, yy) in [
+                    (18, 8), (19, 8), (20, 9), (22, 10), (23, 10),
+                    (22, 12), (23, 12), (18, 14), (19, 14), (20, 14),
+                    (10, 14), (11, 14), (21, 14), (22, 14)
+                ] {
+                    terrain.set(.shallowWater, at: c(xx, yy))
+                }
             },
             props: [
                 (.roundTree, 3, 4), (.tallTree, 5, 5), (.bigTree, 8, 7), (.sacredEvergreen, 22, 17),
@@ -1103,7 +1117,7 @@ extension TestMapFactory {
                 (.rabbit, 23, 20), (.bird, 12, 4), (.cat, 12, 23), (.forestSpirit, 14, 6),
                 (.frog, 12, 15), (.duck, 10, 10), (.fishShadow, 16, 12), (.child, 8, 17)
             ],
-            spawn: c(11, 23)
+            spawn: c(6, 23)
         )
     }
 
@@ -1228,7 +1242,7 @@ extension TestMapFactory {
                 (.bird, 12, 4), (.snail, 9, 23), (.forestSpirit, 23, 18),
                 (.forestSpirit, 6, 8), (.nightLamplighter, 8, 21), (.cat, 5, 22), (.rabbit, 22, 19)
             ],
-            spawn: c(12, 24)
+            spawn: c(8, 23)
         )
     }
 

@@ -10,7 +10,7 @@ final class CameraManager: NSObject, ObservableObject {
 
     private let photoOutput = AVCapturePhotoOutput()
     private let sessionQueue = DispatchQueue(label: "picod.camera.session")
-    private var captureCompletion: ((UIImage?) -> Void)?
+    private var captureCompletion: ((PicodCapturedPhoto?) -> Void)?
 
     func configureSession() {
         setupError = nil
@@ -67,7 +67,7 @@ final class CameraManager: NSObject, ObservableObject {
         }
     }
 
-    func capturePhoto(completion: @escaping (UIImage?) -> Void) {
+    func capturePhoto(completion: @escaping (PicodCapturedPhoto?) -> Void) {
         guard isConfigured else {
             completion(nil)
             return
@@ -92,15 +92,15 @@ extension CameraManager: AVCapturePhotoCaptureDelegate {
         didFinishProcessingPhoto photo: AVCapturePhoto,
         error: Error?
     ) {
-        let image: UIImage?
-        if error == nil, let data = photo.fileDataRepresentation() {
-            image = UIImage(data: data)
+        let capturedPhoto: PicodCapturedPhoto?
+        if error == nil, let data = photo.fileDataRepresentation(), let image = UIImage(data: data) {
+            capturedPhoto = PicodCapturedPhoto(image: image, imageData: data, source: .camera)
         } else {
-            image = nil
+            capturedPhoto = nil
         }
 
         DispatchQueue.main.async {
-            self.captureCompletion?(image)
+            self.captureCompletion?(capturedPhoto)
             self.captureCompletion = nil
         }
     }

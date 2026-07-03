@@ -25,6 +25,7 @@ final class WorldSimulation: ObservableObject {
     private var recentTrail: [MapCoord] = []
     private var quietStepCounter = 0
     private var eventCooldown = 0
+    private var ambientAnimalStepCounter = 0
     private var currentLanguageCode = "en"
     private var appState: AppState = .empty
 
@@ -113,6 +114,7 @@ final class WorldSimulation: ObservableObject {
         recentTrail = []
         quietStepCounter = 0
         eventCooldown = 0
+        ambientAnimalStepCounter = 0
         rebuildSpatialCaches(for: nextMap)
     }
 
@@ -180,6 +182,8 @@ final class WorldSimulation: ObservableObject {
     }
 
     private func step() {
+        stepAmbientAnimals()
+
         if eventCooldown > 0 {
             eventCooldown -= 1
         }
@@ -263,6 +267,87 @@ final class WorldSimulation: ObservableObject {
         return weightedRandomPick(weighted) ?? current
     }
 
+    private func stepAmbientAnimals() {
+        guard !runtimeAnimals.isEmpty else { return }
+        ambientAnimalStepCounter += 1
+
+        var nextAnimals = runtimeAnimals
+        for index in nextAnimals.indices {
+            let animal = nextAnimals[index]
+            guard isAmbientAnimalMovable(animal.kind) else { continue }
+
+            let chance = ambientMoveChance(for: animal.kind)
+            guard nextRandomDouble() < chance,
+                  let nextCoord = chooseNextAnimalCoord(for: animal) else {
+                continue
+            }
+
+            nextAnimals[index] = AnimalPlacement(kind: animal.kind, coord: nextCoord)
+        }
+
+        runtimeAnimals = nextAnimals
+    }
+
+    private func isAmbientAnimalMovable(_ kind: AnimalKind) -> Bool {
+        switch kind {
+        case .bird, .duck, .rabbit, .cat, .dog, .deer, .frog, .butterfly,
+             .snail, .fishShadow, .cow, .sheep, .horse:
+            return true
+        case .child, .shrineMaiden, .caretaker, .fisher, .edgeTraveler,
+             .forestSpirit, .truckDriver, .nightLamplighter, .lostBackpacker,
+             .umbrellaWoman, .toriiBetweenLight, .doorKnocker, .mirrorMiko:
+            return false
+        }
+    }
+
+    private func ambientMoveChance(for kind: AnimalKind) -> Double {
+        switch kind {
+        case .fishShadow, .bird, .butterfly:
+            return 0.68
+        case .duck, .frog:
+            return 0.52
+        case .snail:
+            return 0.18
+        default:
+            return 0.36
+        }
+    }
+
+    private func chooseNextAnimalCoord(for animal: AnimalPlacement) -> MapCoord? {
+        let options = adjacentAnimalCoords(from: animal.coord, kind: animal.kind)
+        guard !options.isEmpty else { return nil }
+        return options[Int(nextRandom() % UInt64(options.count))]
+    }
+
+    private func adjacentAnimalCoords(from coord: MapCoord, kind: AnimalKind) -> [MapCoord] {
+        let candidates = [
+            MapCoord(x: coord.x + 1, y: coord.y),
+            MapCoord(x: coord.x - 1, y: coord.y),
+            MapCoord(x: coord.x, y: coord.y + 1),
+            MapCoord(x: coord.x, y: coord.y - 1),
+            coord
+        ]
+        return candidates.filter { isAnimalHabitable(kind: kind, coord: $0) }
+    }
+
+    private func isAnimalHabitable(kind: AnimalKind, coord: MapCoord) -> Bool {
+        guard coord.x >= 0, coord.y >= 0, coord.x < map.width, coord.y < map.height else {
+            return false
+        }
+
+        let terrain = map.terrain.landform(at: coord)
+        switch kind {
+        case .fishShadow:
+            return terrain.isWaterLike
+        case .duck, .frog:
+            return terrain.isWaterLike || (isWalkable(coord) && isNearPond(coord))
+        case .bird, .butterfly:
+            return !blockedCoords.contains(coord)
+        default:
+            return isWalkable(coord)
+        }
+    }
+
     private func collectNearbyWalkableTiles(from origin: MapCoord, radius: Int) -> [MapCoord] {
         var coords: [MapCoord] = []
 
@@ -336,6 +421,11 @@ final class WorldSimulation: ObservableObject {
     private func detectInteractionEvent(at coord: MapCoord) -> PetEvent? {
         guard eventCooldown == 0 else { return nil }
 
+        if let animal = nearestRuntimeAnimal(to: coord, maxDistance: 1),
+           let event = interactionEvent(for: animal.kind) {
+            return event
+        }
+
         if nearestMatch(to: coord, points: birdCoords, maxDistance: 1) != nil {
             return PetEvent(
                 type: .sawAnimal,
@@ -390,6 +480,80 @@ final class WorldSimulation: ObservableObject {
         }
 
         return nil
+    }
+
+    private func nearestRuntimeAnimal(to coord: MapCoord, maxDistance: Int) -> AnimalPlacement? {
+        runtimeAnimals.first { manhattan($0.coord, coord) <= maxDistance }
+    }
+
+    private func interactionEvent(for kind: AnimalKind) -> PetEvent? {
+        switch kind {
+        case .bird:
+            return PetEvent(
+                type: .sawAnimal,
+                summary: currentLanguageCode == "zh"
+                    ? "pico 在草地里注意到一只小鸟。"
+                    : "pico noticed a bird in the grass.",
+                sourceAnimal: .bird,
+                sourcePlace: .grass
+            )
+        case .duck:
+            return PetEvent(
+                type: .sawAnimal,
+                summary: currentLanguageCode == "zh"
+                    ? "pico 看见水边有一只鸭子慢慢游过。"
+                    : "pico watched a duck drift along the water.",
+                sourceAnimal: .duck,
+                sourcePlace: .water
+            )
+        case .frog:
+            return PetEvent(
+                type: .sawAnimal,
+                summary: currentLanguageCode == "zh"
+                    ? "pico 在湿草边看见青蛙跳了一下。"
+                    : "pico saw a frog make a small hop by the wet grass.",
+                sourceAnimal: .frog,
+                sourcePlace: .water
+            )
+        case .butterfly:
+            return PetEvent(
+                type: .sawAnimal,
+                summary: currentLanguageCode == "zh"
+                    ? "pico 跟着蝴蝶的影子停了一会儿。"
+                    : "pico paused with the butterfly's tiny shadow.",
+                sourceAnimal: .butterfly,
+                sourcePlace: .grass
+            )
+        case .fishShadow:
+            return PetEvent(
+                type: .foundWater,
+                summary: currentLanguageCode == "zh"
+                    ? "pico 注意到水面下有一道很浅的影子。"
+                    : "pico noticed a pale shadow under the water.",
+                sourceAnimal: .fishShadow,
+                sourcePlace: .water
+            )
+        case .rabbit, .cat, .dog, .deer, .snail, .cow, .sheep, .horse:
+            return PetEvent(
+                type: .sawAnimal,
+                summary: currentLanguageCode == "zh"
+                    ? "pico 看见一个小小的访客从路边经过。"
+                    : "pico noticed a small visitor passing near the path.",
+                sourceAnimal: kind,
+                sourcePlace: .grass
+            )
+        case .child, .shrineMaiden, .caretaker, .fisher, .edgeTraveler,
+             .forestSpirit, .truckDriver, .nightLamplighter, .lostBackpacker,
+             .umbrellaWoman, .toriiBetweenLight, .doorKnocker, .mirrorMiko:
+            return PetEvent(
+                type: .sawAnimal,
+                summary: currentLanguageCode == "zh"
+                    ? "pico 看见远处有人影安静地经过。"
+                    : "pico saw a quiet figure pass at the edge of the path.",
+                sourceAnimal: kind,
+                sourcePlace: .grass
+            )
+        }
     }
 
     private func nearestMatch(to coord: MapCoord, points: [MapCoord], maxDistance: Int) -> MapCoord? {

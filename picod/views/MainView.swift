@@ -24,8 +24,9 @@ struct MainView: View {
                         onCancel: {
                             camera.stopSession()
                         },
-                        onCapture: { image in
+                        onCapture: { capturedPhoto in
                             camera.stopSession()
+                            let image = capturedPhoto.image
                             let pixelated = PixelProcessor.pixelate(image: image)
                             self.result = CaptureResult(original: image, pixelated: pixelated)
                         }

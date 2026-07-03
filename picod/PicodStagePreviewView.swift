@@ -8,6 +8,7 @@ struct PicodSideStoryPanelView: View {
     let accentHex: String?
     let diaryNarrative: String?
     let isPresented: Bool
+    let currentFormId: Int
     @ObservedObject var memoryStore: PicodMemoryStore
     let languageCode: String
     let onDismiss: () -> Void
@@ -963,6 +964,9 @@ struct PicodSideStoryPanelView: View {
     }
 
     private var latestCommittedRender: PicoRenderResult? {
+        if let canonicalCurrentRender {
+            return canonicalCurrentRender
+        }
         let targetDay = progress.map { max(1, min(7, $0.dayInCycle)) } ?? 1
         for day in stride(from: targetDay, through: 1, by: -1) {
             if let render = committedRender(for: day) {
@@ -973,12 +977,42 @@ struct PicodSideStoryPanelView: View {
     }
 
     private var growthRenders: [PicoRenderResult] {
+        if let canonicalCurrentRender {
+            return [canonicalCurrentRender]
+        }
         let targetDay = progress.map { max(1, min(7, $0.dayInCycle)) } ?? 1
         let renders = (1...targetDay).compactMap { committedRender(for: $0) }
         if renders.isEmpty, let latestCommittedRender {
             return [latestCommittedRender]
         }
         return renders
+    }
+
+    private var canonicalCurrentRender: PicoRenderResult? {
+        let targetDay = progress.map { max(1, min(7, $0.dayInCycle)) } ?? 1
+        if currentFormId > 0 {
+            return singleFormRender(formId: currentFormId, day: targetDay)
+        }
+        if let record = currentDailyRecord,
+           let formId = record.picoGenomeAfter?.renderedFormID ?? record.renderedFormID,
+           formId > 0 {
+            return singleFormRender(formId: formId, day: record.dayIndexInLife.rawValue)
+        }
+        return nil
+    }
+
+    private func singleFormRender(formId: Int, day: Int) -> PicoRenderResult {
+        PicoRenderResult(
+            generationId: generationId,
+            dayIndex: day,
+            chosenFormId: formId,
+            partForms: [
+                .head: formId,
+                .limbs: formId,
+                .body: formId
+            ],
+            replacedParts: PicoPart.allCases
+        )
     }
 
     private var growthPlaybackKey: String {

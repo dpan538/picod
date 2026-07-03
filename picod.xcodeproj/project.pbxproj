@@ -377,6 +377,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSCameraUsageDescription = "用于拍摄照片并生成像素化预览。";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "用于生成本地天气、时间和地图氛围，不会上传位置。";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "用于选择每日照片并读取本地照片信息，不会上传照片。";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -411,6 +412,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSCameraUsageDescription = "用于拍摄照片并生成像素化预览。";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "用于生成本地天气、时间和地图氛围，不会上传位置。";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "用于选择每日照片并读取本地照片信息，不会上传照片。";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

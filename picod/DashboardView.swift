@@ -311,9 +311,9 @@ struct DashboardView: View {
 
     private var primaryActionTitle: String {
         if languageCode == "zh" {
-            return needsPhoto ? "拍一张" : "拍一拍"
+            return needsPhoto ? "今日照片" : "拍一拍"
         }
-        return needsPhoto ? "TAKE A PHOTO" : "PAT PICO"
+        return needsPhoto ? "TODAY'S PHOTO" : "PAT PICO"
     }
 
     private var secondaryActionTitle: String {

@@ -54,6 +54,54 @@ missing projection evidence:
 - `day5NightLamplighterTrace` uses `nightGrove` and inherits blocked spawn /
   unreachable path errors.
 
+## P1C Static Map Blocker Remediation
+
+P1C fixes the inherited base-map blockers instead of suppressing validator
+errors.
+
+Latest combined console result after P1C:
+
+- static maps: 5
+- projection scenarios: 10
+- total errors: 0
+- total warnings: 320
+- total actions: 320
+- high actions: 55
+
+Breakdown:
+
+- static map errors/warnings: 0 / 109
+- projection scenario errors/warnings: 0 / 211
+
+Resolved blockers:
+
+- `wetlandLantern`: moved Pico spawn to a valid path tile and added shallow
+  water contact pockets for existing wetland bridge, dock, and reed props.
+- `nightGrove`: moved Pico spawn to a valid path tile inside the lantern route.
+- `day4RainyUmbrellaTrace`: projection errors cleared through the base
+  `wetlandLantern` fix.
+- `day5NightLamplighterTrace`: projection errors cleared through the base
+  `nightGrove` fix.
+- Shared lower-route occlusion pressure in `forestShrine` / `aprilDense` was
+  reduced by moving lower perimeter tree anchors outward.
+
+Projection-specific checks remain clean:
+
+- unknown catalog IDs: 0
+- ungrounded projected elements: 0
+- missing evidence/source: 0
+- locked EraMemory echo: 0
+- projection path obstruction count: 0
+
+Remaining warnings are still actionable backlog, not ignored noise:
+
+- route and spawn visual occlusion risks in dense maps
+- perimeter forest sparse warnings in several review maps
+- disconnected structures and missing approach tiles
+- terrain mismatch warnings under some decorative props
+- wetland projected animal habitat warnings for future projection placement
+  tuning
+
 ## Projection Scenario Coverage
 
 Audited scenarios:
@@ -79,16 +127,19 @@ Projection-specific checks passed in the latest audit:
 
 ## Top Priority Backlog
 
-1. Fix `wetlandLantern` Pico spawn blockage.
-2. Restore reachable path from `wetlandLantern` Pico spawn.
-3. Fix `nightGrove` Pico spawn blockage.
-4. Restore reachable path from `nightGrove` Pico spawn.
-5. Reduce repeated Pico spawn occlusion risks in `forestShrine`.
-6. Reduce repeated Pico route occlusion risks in `forestShrine`.
-7. Reduce repeated Pico spawn/route occlusion risks in `aprilDense`.
-8. Review water-contact failures in `wetlandLantern`.
-9. Add approach tiles for disconnected or hard-to-read structures.
-10. Continue perimeter forest densification without crowding Pico routes.
+1. Reduce `forestShrine` Pico spawn occlusion risk around `x10 y22`.
+2. Reduce `forestShrine` route occlusion risk around `x17 y21` and `x18 y25`.
+3. Reduce `aprilDense` route occlusion risk around `x10 y22` and `x12 y19`.
+4. Reduce `wetlandLantern` spawn readability risk near `x4 y24`, `x5 y21`,
+   and `x8 y22`.
+5. Reduce `nightGrove` route readability risk near `x12 y24`, `x8 y20`, and
+   `x6 y21`.
+6. Add clearer approach tiles for disconnected shrine and structure props.
+7. Tune wetland projected animal placement to avoid habitat warnings.
+8. Continue perimeter forest densification without crowding Pico routes.
+9. Align terrain under decorative props that still report mismatch warnings.
+10. Keep projection preview behind validation until remaining high route
+    readability warnings are reviewed.
 
 ## Not Implemented Intentionally
 
@@ -127,4 +178,5 @@ env SIMCTL_CHILD_PICOD_RUN_WORLD_RICHNESS_AUDIT=1 xcrun simctl launch --terminat
 
 Observed result:
 
-- `static maps 5 / projection scenarios 10 / errors 26 / warnings 366 / actions 392 / high 113`
+- P1B baseline: `static maps 5 / projection scenarios 10 / errors 26 / warnings 366 / actions 392 / high 113`
+- P1C current: `static maps 5 / projection scenarios 10 / errors 0 / warnings 320 / actions 320 / high 55`

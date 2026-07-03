@@ -12,6 +12,7 @@ struct DailyCaptureOrchestratorInput {
     let worldInput: PicodWorldInput
     let participation: GenerationParticipation
     let activeStoryBeatIDs: [String]
+    let photoMetadata: PhotoCaptureMetadata?
     let languageCode: String
     let isNightClosure: Bool
 }
@@ -61,6 +62,8 @@ struct DailyCaptureOrchestrator {
             chosenFormId: seedMatch.renderedFormID,
             replacedParts: render.replacedParts,
             colorPalette: input.colorPalette,
+            captureMetadata: input.photoMetadata,
+            captureEnvironment: PhotoCaptureEnvironmentSnapshot.from(worldInput: input.worldInput),
             timestamp: input.localDate
         )
         let evolution = PicoEvolutionEngine().evolve(

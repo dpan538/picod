@@ -10,7 +10,7 @@ struct CameraView: View {
     @ObservedObject var camera: CameraManager
     let statusLine: String
     let onCancel: () -> Void
-    let onCapture: (UIImage) -> Void
+    let onCapture: (PicodCapturedPhoto) -> Void
 
     @State private var shutterFlash = false
 
@@ -78,12 +78,12 @@ struct CameraView: View {
         withAnimation(.easeOut(duration: 0.08)) {
             shutterFlash = true
         }
-        camera.capturePhoto { image in
+        camera.capturePhoto { capturedPhoto in
             withAnimation(.easeIn(duration: 0.12)) {
                 shutterFlash = false
             }
-            guard let image else { return }
-            onCapture(image)
+            guard let capturedPhoto else { return }
+            onCapture(capturedPhoto)
         }
     }
 }

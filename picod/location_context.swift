@@ -79,7 +79,7 @@ enum PicodWeatherCondition: String, Equatable, Codable {
         case .storm: return .stormy
         case .fog: return .foggy
         case .snow: return .snowy
-        case .unknown: return .partlyCloudy
+        case .unknown: return .unknown
         }
     }
 }
@@ -87,12 +87,14 @@ enum PicodWeatherCondition: String, Equatable, Codable {
 struct PicodWeatherContext: Equatable {
     let temperatureCelsius: Double?
     let humidityPercent: Double?
+    let precipitationChance: Double?
     let condition: PicodWeatherCondition
     let fetchedAt: Date?
 
     static let unavailable = PicodWeatherContext(
         temperatureCelsius: nil,
         humidityPercent: nil,
+        precipitationChance: nil,
         condition: .unknown,
         fetchedAt: nil
     )
@@ -178,7 +180,9 @@ struct PicodWorldInput: Equatable {
     let environmentalInfluence: PicodEnvironmentalInfluence
 
     static func fallback(now: Date, timezone: TimeZone = .current) -> PicodWorldInput {
-        let hour = Calendar.current.component(.hour, from: now)
+        var calendar = Calendar.current
+        calendar.timeZone = timezone
+        let hour = calendar.component(.hour, from: now)
         let phase = PicodTimePhase.from(hour: hour)
         let stable = PicodStableWorldInput(
             quantizedLatitude: 0,
@@ -244,10 +248,18 @@ final class WeatherKitPicodProvider: PicodWeatherProviding {
             let location = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
             let weather = try await WeatherService.shared.weather(for: location)
             let current = weather.currentWeather
+            let hourlyNow = Self.nearestHourWeather(from: weather, now: now)
+            let precipitationChance = hourlyNow?.precipitationChance
+            let mappedCondition = Self.resolvedCondition(
+                current: current.condition,
+                hourly: hourlyNow?.condition,
+                precipitationChance: precipitationChance
+            )
             let mapped = PicodWeatherContext(
                 temperatureCelsius: current.temperature.converted(to: .celsius).value,
                 humidityPercent: current.humidity * 100,
-                condition: Self.mapCondition(current.condition),
+                precipitationChance: precipitationChance,
+                condition: mappedCondition,
                 fetchedAt: now
             )
             cache = CacheEntry(weather: mapped, timestamp: now, key: key)
@@ -263,14 +275,39 @@ final class WeatherKitPicodProvider: PicodWeatherProviding {
         #endif
     }
 
-    private static func coordinateKey(_ coordinate: CLLocationCoordinate2D) -> String {
+    nonisolated private static func coordinateKey(_ coordinate: CLLocationCoordinate2D) -> String {
         let qLat = (coordinate.latitude / 0.01).rounded() * 0.01
         let qLon = (coordinate.longitude / 0.01).rounded() * 0.01
         return String(format: "%.2f|%.2f", qLat, qLon)
     }
 
     #if canImport(WeatherKit)
-    private static func mapCondition(_ condition: WeatherKit.WeatherCondition) -> PicodWeatherCondition {
+    nonisolated private static func nearestHourWeather(from weather: Weather, now: Date) -> HourWeather? {
+        weather.hourlyForecast.forecast.min { lhs, rhs in
+            abs(lhs.date.timeIntervalSince(now)) < abs(rhs.date.timeIntervalSince(now))
+        }
+    }
+
+    nonisolated private static func resolvedCondition(
+        current: WeatherKit.WeatherCondition,
+        hourly: WeatherKit.WeatherCondition?,
+        precipitationChance: Double?
+    ) -> PicodWeatherCondition {
+        let currentCondition = mapCondition(current)
+        let hourlyCondition = hourly.map(mapCondition)
+        if currentCondition == .rain || currentCondition == .storm {
+            return currentCondition
+        }
+        if hourlyCondition == .rain || hourlyCondition == .storm {
+            return hourlyCondition ?? currentCondition
+        }
+        if let precipitationChance, precipitationChance >= 0.5 {
+            return .rain
+        }
+        return currentCondition
+    }
+
+    nonisolated private static func mapCondition(_ condition: WeatherKit.WeatherCondition) -> PicodWeatherCondition {
         switch condition {
         case .clear, .mostlyClear, .hot, .windy:
             return .clear
