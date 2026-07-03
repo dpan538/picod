@@ -59,6 +59,9 @@ enum DevTestMode {
     static var runWorldRichnessAudit: Bool {
         environment["PICOD_RUN_WORLD_RICHNESS_AUDIT"] == "1"
     }
+    static var useWorldProjectionMap: Bool {
+        WorldProjectionRuntimeGate.isEnabled
+    }
     static var previewWorkingStateWhenEmpty: Bool {
         environment["PICOD_PREVIEW_WORKING_STATE"] == "1" ||
             environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1" ||

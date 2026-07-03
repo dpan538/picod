@@ -626,6 +626,61 @@ struct ContentView: View {
         return Calendar.current.component(.hour, from: now)
     }
 
+    private var worldProjectionCalendar: Calendar {
+        var calendar = Calendar.current
+        if let timezone = TimeZone(identifier: worldInputService.worldInput.stable.timezoneIdentifier) {
+            calendar.timeZone = timezone
+        }
+        return calendar
+    }
+
+    private func resolveGatedWorldProjection(baseMap: TestMap?) -> WorldProjectionRuntimeRenderState {
+        guard DevTestMode.useWorldProjectionMap else {
+            return .disabled()
+        }
+        guard let baseMap else {
+            return .fallback(
+                reason: "missing base map",
+                summary: "\(WorldProjectionRuntimeGate.debugSummary) fallback=missing-base-map"
+            )
+        }
+
+        let bundle = WorldSignalResolver().resolveToday(
+            memoryStore: memoryStore,
+            date: nowTick,
+            calendar: worldProjectionCalendar
+        )
+        let projection = WorldStateProjector().project(
+            bundle: bundle,
+            baseMap: baseMap,
+            mapVariantID: DevTestMode.mapReviewVariant.rawValue
+        )
+        let validation = WorldMapValidator.validate(projection, baseMap: baseMap)
+        let summary = [
+            WorldProjectionRuntimeGate.debugSummary,
+            "projection=\(projection.id)",
+            "elements=\(projection.allElements.count)",
+            "errors=\(validation.errorCount)",
+            "warnings=\(validation.warningCount)"
+        ].joined(separator: " ")
+
+        guard validation.errorCount == 0 else {
+            return .fallback(
+                reason: "validation errors \(validation.errorCount)",
+                projection: projection,
+                validation: validation,
+                summary: "\(summary) fallback=validation-errors"
+            )
+        }
+
+        return .active(
+            projection: projection,
+            placementPlan: WorldProjectionMapAdapter.placementPlan(for: projection),
+            validation: validation,
+            summary: summary
+        )
+    }
+
     private func buildMapArea(
         mapSize: CGFloat,
         mapHeight: CGFloat,
@@ -633,7 +688,14 @@ struct ContentView: View {
         devMap: TestMap?,
         ambientCurve: MapAmbientMoodCurve
     ) -> AnyView {
-        if displayAppState == .empty {
+        if DevTestMode.showObjectGalleryDebug {
+            return AnyView(
+                ObjectGalleryDebugView()
+                    .frame(width: mapSize, height: mapHeight)
+            )
+        }
+
+        if displayAppState == .empty && !DevTestMode.useWorldProjectionMap {
             return AnyView(
                 ZStack {
                     Color.picod_paper
@@ -643,11 +705,17 @@ struct ContentView: View {
             )
         }
 
-        if DevTestMode.showObjectGalleryDebug {
-            return AnyView(
-                ObjectGalleryDebugView()
-                    .frame(width: mapSize, height: mapHeight)
-            )
+        let projectionState = resolveGatedWorldProjection(baseMap: devMap)
+        let baseRuntimeProps = DevTestMode.useFullTestMap ? worldSimulation.runtimeProps : []
+        let baseRuntimeAnimals = DevTestMode.useFullTestMap ? worldSimulation.runtimeAnimals : []
+        let mapRuntimeProps: [PropPlacement]
+        let mapRuntimeAnimals: [AnimalPlacement]
+        if projectionState.canRenderProjection, let placementPlan = projectionState.placementPlan {
+            mapRuntimeProps = baseRuntimeProps + placementPlan.projectedProps
+            mapRuntimeAnimals = baseRuntimeAnimals + placementPlan.projectedAnimals
+        } else {
+            mapRuntimeProps = baseRuntimeProps
+            mapRuntimeAnimals = baseRuntimeAnimals
         }
 
         return AnyView(
@@ -659,8 +727,8 @@ struct ContentView: View {
                     petCoord: DevTestMode.useFullTestMap ? worldSimulation.petCoord : nil,
                     petFormId: displayLatestFormId,
                     petAccentHex: displayLatestMapTintHex.isEmpty ? nil : displayLatestMapTintHex,
-                    runtimeProps: DevTestMode.useFullTestMap ? worldSimulation.runtimeProps : [],
-                    runtimeAnimals: DevTestMode.useFullTestMap ? worldSimulation.runtimeAnimals : [],
+                    runtimeProps: mapRuntimeProps,
+                    runtimeAnimals: mapRuntimeAnimals,
                     ambientCurve: ambientCurve,
                     weatherCondition: displayWeather.condition,
                     humidityPercent: displayHumidityPercent,
@@ -668,7 +736,7 @@ struct ContentView: View {
                 )
                 .frame(width: mapSize, height: mapHeight)
 
-                if displayAppState != .picoEgg {
+                if displayAppState != .empty && displayAppState != .picoEgg {
                     PetView(
                         formId: displayLatestFormId,
                         accentHex: displayLatestMapTintHex.isEmpty ? nil : displayLatestMapTintHex,
@@ -683,6 +751,14 @@ struct ContentView: View {
                             }
                         }
                 }
+
+                #if DEBUG
+                if projectionState.isGateEnabled {
+                    WorldProjectionRuntimeStatusOverlay(state: projectionState)
+                        .padding(.leading, 8)
+                        .padding(.top, 8)
+                }
+                #endif
             }
             .frame(width: mapSize, height: mapHeight)
             .overlay {
@@ -2314,6 +2390,50 @@ private struct PicoHeadOnlyPreview: View {
         }
     }
 }
+
+#if DEBUG
+private struct WorldProjectionRuntimeStatusOverlay: View {
+    let state: WorldProjectionRuntimeRenderState
+
+    private var title: String {
+        if state.canRenderProjection {
+            return "projection map"
+        }
+        return "projection fallback"
+    }
+
+    private var detail: String {
+        if let fallbackReason = state.fallbackReason {
+            return fallbackReason
+        }
+        return "elements \(state.projectedElementCount) / warnings \(state.validationWarningCount)"
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title)
+                .font(PicodFont.monoBold(8))
+                .foregroundStyle(Color.picod_paper)
+            Text(detail)
+                .font(PicodFont.mono(7))
+                .foregroundStyle(Color.picod_paper.opacity(0.86))
+                .lineLimit(1)
+            Text("errors \(state.validationErrorCount)")
+                .font(PicodFont.mono(7))
+                .foregroundStyle(Color.picod_paper.opacity(0.72))
+        }
+        .padding(.horizontal, 6)
+        .padding(.vertical, 5)
+        .background(Color.picod_ink.opacity(0.72))
+        .overlay(
+            Rectangle()
+                .stroke(Color.picod_paper.opacity(0.28), lineWidth: 1)
+        )
+        .frame(maxWidth: 170, alignment: .leading)
+        .allowsHitTesting(false)
+    }
+}
+#endif
 
 #Preview {
     ContentView()
