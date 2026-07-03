@@ -7,28 +7,25 @@ struct ObjectGalleryDebugView: View {
         GridItem(.flexible(), spacing: 12)
     ]
 
-    private let entries: [ObjectGlyphEntry] = [
-        .init(title: "roundTree", kind: .roundTree),
-        .init(title: "tallTree", kind: .tallTree),
-        .init(title: "bush", kind: .bushDense),
-        .init(title: "smallRock", kind: .smallRock),
-        .init(title: "largeRock", kind: .largeRock),
-        .init(title: "signpost", kind: .signpost),
-        .init(title: "bench", kind: .bench),
-        .init(title: "bird", kind: .bird),
-        .init(title: "rabbit", kind: .rabbit),
-        .init(title: "deer", kind: .deer),
-        .init(title: "shrineSmall", kind: .shrine),
-        .init(title: "mailbox", kind: .mailbox),
-        .init(title: "stoneWell", kind: .well)
-    ]
+    private let validation = WorldMapValidator.validate(TestMapFactory.devMap(context: DevTestMode.worldGenerationContext))
+    private let richnessAudit = WorldMapRichnessAuditor.auditAllReviewMaps(context: DevTestMode.worldGenerationContext)
+    private let entries: [ObjectGalleryEntry] = PropKind.allCases.map { .prop($0) } + AnimalKind.allCases.map { .animal($0) }
 
     var body: some View {
         ScrollView {
+            WorldRichnessAuditDebugPanel(audit: richnessAudit)
+                .padding(.horizontal, 12)
+                .padding(.top, 12)
+
+            WorldValidationDebugPanel(report: validation)
+                .padding(.horizontal, 12)
+                .padding(.top, 8)
+                .padding(.bottom, 12)
+
             LazyVGrid(columns: columns, spacing: 12) {
                 ForEach(entries) { entry in
                     VStack(alignment: .leading, spacing: 6) {
-                        ObjectGlyphCanvas(kind: entry.kind)
+                        ObjectMapPreview(entry: entry)
                             .frame(height: 86)
                             .background(Color(hex: "E4E7D8"))
                             .overlay(
@@ -39,7 +36,17 @@ struct ObjectGalleryDebugView: View {
                         Text(entry.title)
                             .font(PicodFont.mono(10))
                             .foregroundStyle(Color.picod_ink2)
+
+                        Text(entry.subtitle)
+                            .font(PicodFont.mono(8))
+                            .foregroundStyle(Color.picod_ink2.opacity(0.72))
+                            .lineLimit(2)
+
+                        ObjectSpecRows(spec: entry.spec)
                     }
+                    .padding(8)
+                    .background(Color.picod_paper.opacity(0.52))
+                    .overlay(Rectangle().stroke(Color.picod_ink.opacity(0.18), lineWidth: 1))
                 }
             }
             .padding(12)
@@ -48,10 +55,505 @@ struct ObjectGalleryDebugView: View {
     }
 }
 
-private struct ObjectGlyphEntry: Identifiable {
-    let id = UUID()
+private struct WorldRichnessAuditDebugPanel: View {
+    let audit: WorldMapRichnessAuditReport
+
+    private let columns = [
+        GridItem(.flexible(), spacing: 6),
+        GridItem(.flexible(), spacing: 6)
+    ]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .firstTextBaseline) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("WORLD RICHNESS AUDIT")
+                        .font(PicodFont.monoBold(11))
+                        .foregroundStyle(Color.picod_ink)
+                    Text("all review maps")
+                        .font(PicodFont.mono(9))
+                        .foregroundStyle(Color.picod_ink2)
+                }
+
+                Spacer()
+
+                Text(audit.didPassCoreRules ? "CORE OK" : "NEEDS WORK")
+                    .font(PicodFont.monoBold(9))
+                    .foregroundStyle(Color.picod_paper)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(audit.didPassCoreRules ? Color.picod_ink : Color(hex: "9A4B3A"))
+            }
+
+            LazyVGrid(columns: columns, spacing: 6) {
+                WorldValidationMetric(title: "MAPS", value: "\(audit.mapCount)")
+                WorldValidationMetric(title: "ACTIONS", value: "\(audit.totalActionCount)")
+                WorldValidationMetric(title: "ERRORS", value: "\(audit.totalErrorCount)")
+                WorldValidationMetric(title: "WARNINGS", value: "\(audit.totalWarningCount)")
+                WorldValidationMetric(title: "HIGH+", value: "\(audit.highPriorityActionCount)")
+                WorldValidationMetric(title: "SCENARIOS", value: "\(audit.projectionScenarioCount)")
+            }
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text("STATIC MAPS")
+                    .font(PicodFont.monoBold(9))
+                    .foregroundStyle(Color.picod_ink)
+                ForEach(audit.variantReports) { report in
+                    WorldRichnessVariantRow(report: report)
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text("PROJECTION SCENARIOS")
+                    .font(PicodFont.monoBold(9))
+                    .foregroundStyle(Color.picod_ink)
+                ForEach(audit.projectionReports) { report in
+                    WorldProjectionScenarioRow(report: report)
+                }
+            }
+
+            if let firstProjection = audit.projectionReports.first(where: { !$0.projection.allElements.isEmpty }) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("PROJECTED ELEMENTS")
+                        .font(PicodFont.monoBold(9))
+                        .foregroundStyle(Color.picod_ink)
+                    ForEach(firstProjection.projection.allElements.prefix(5)) { element in
+                        WorldProjectedElementRow(element: element)
+                    }
+                }
+            }
+
+            if audit.topActions.isEmpty {
+                Text("No richness actions found.")
+                    .font(PicodFont.mono(9))
+                    .foregroundStyle(Color.picod_ink2)
+            } else {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("NEXT ACTIONS")
+                        .font(PicodFont.monoBold(9))
+                        .foregroundStyle(Color.picod_ink)
+                    ForEach(audit.topActions.prefix(8)) { action in
+                        WorldRichnessActionRow(action: action)
+                    }
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(Color.picod_paper)
+        .overlay(Rectangle().stroke(Color.picod_ink.opacity(0.24), lineWidth: 1))
+    }
+}
+
+private struct WorldProjectionScenarioRow: View {
+    let report: WorldProjectionAuditScenarioReport
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(report.id)
+                    .font(PicodFont.monoBold(8))
+                    .foregroundStyle(Color.picod_ink)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.62)
+                Spacer(minLength: 4)
+                Text("e\(report.validation.errorCount) w\(report.validation.warningCount) p\(report.projectedElementCount)")
+                    .font(PicodFont.mono(8))
+                    .foregroundStyle(report.validation.errorCount > 0 ? Color(hex: "9A4B3A") : Color.picod_ink2)
+            }
+            Text("story \(report.storyEchoCount) cycle \(report.cycleMarkerCount) era \(report.eraEchoCount) occlusion \(report.occlusionRiskCount)")
+                .font(PicodFont.mono(8))
+                .foregroundStyle(Color.picod_ink2)
+                .lineLimit(2)
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 5)
+        .background(Color.picod_paper2.opacity(0.34))
+        .overlay(Rectangle().stroke(Color.picod_ink.opacity(0.12), lineWidth: 1))
+    }
+}
+
+private struct WorldProjectedElementRow: View {
+    let element: WorldProjectedElement
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Text(element.source.rawValue.uppercased())
+                    .font(PicodFont.monoBold(8))
+                    .foregroundStyle(Color.picod_ink)
+                Text(element.catalogElementID)
+                    .font(PicodFont.mono(8))
+                    .foregroundStyle(Color.picod_ink2)
+                Spacer(minLength: 4)
+                Text("x\(element.tileOrAnchor.x) y\(element.tileOrAnchor.y)")
+                    .font(PicodFont.mono(8))
+                    .foregroundStyle(Color.picod_ink2)
+            }
+            Text(element.debugReason)
+                .font(PicodFont.mono(8))
+                .foregroundStyle(Color.picod_ink2)
+                .fixedSize(horizontal: false, vertical: true)
+            Text("evidence \(element.evidenceIDs.prefix(3).joined(separator: ", "))")
+                .font(PicodFont.mono(8))
+                .foregroundStyle(Color.picod_ink2.opacity(0.78))
+                .lineLimit(2)
+        }
+        .padding(6)
+        .background(Color.picod_paper2.opacity(0.34))
+        .overlay(Rectangle().stroke(Color.picod_ink.opacity(0.12), lineWidth: 1))
+    }
+}
+
+private struct WorldRichnessVariantRow: View {
+    let report: WorldMapRichnessVariantReport
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Text(report.id)
+                .font(PicodFont.monoBold(8))
+                .foregroundStyle(Color.picod_ink)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+            Spacer(minLength: 4)
+            Text("e\(report.validation.errorCount) w\(report.validation.warningCount) a\(report.actions.count)")
+                .font(PicodFont.mono(8))
+                .foregroundStyle(report.validation.errorCount > 0 ? Color(hex: "9A4B3A") : Color.picod_ink2)
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 5)
+        .background(Color.picod_paper2.opacity(0.34))
+        .overlay(Rectangle().stroke(Color.picod_ink.opacity(0.12), lineWidth: 1))
+    }
+}
+
+private struct WorldRichnessActionRow: View {
+    let action: WorldRichnessAction
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Text(action.priority.rawValue.uppercased())
+                    .font(PicodFont.monoBold(8))
+                    .foregroundStyle(action.priority == .blocker || action.priority == .high ? Color(hex: "9A4B3A") : Color.picod_ink2)
+                Text(action.variantID)
+                    .font(PicodFont.monoBold(8))
+                    .foregroundStyle(Color.picod_ink)
+                Spacer(minLength: 4)
+                Text(action.coordLabel)
+                    .font(PicodFont.mono(8))
+                    .foregroundStyle(Color.picod_ink2)
+            }
+            Text(action.title)
+                .font(PicodFont.monoBold(8))
+                .foregroundStyle(Color.picod_ink)
+                .fixedSize(horizontal: false, vertical: true)
+            Text(action.guidance)
+                .font(PicodFont.mono(8))
+                .foregroundStyle(Color.picod_ink2)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(6)
+        .background(Color.picod_paper2.opacity(0.34))
+        .overlay(Rectangle().stroke(Color.picod_ink.opacity(0.12), lineWidth: 1))
+    }
+}
+
+private struct WorldValidationDebugPanel: View {
+    let report: WorldMapValidationReport
+
+    private let metricColumns = [
+        GridItem(.flexible(), spacing: 6),
+        GridItem(.flexible(), spacing: 6)
+    ]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .firstTextBaseline) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("WORLD VALIDATION")
+                        .font(PicodFont.monoBold(11))
+                        .foregroundStyle(Color.picod_ink)
+                    Text(report.mapName)
+                        .font(PicodFont.mono(9))
+                        .foregroundStyle(Color.picod_ink2)
+                }
+
+                Spacer()
+
+                Text(report.didPassCoreRules ? "CORE OK" : "ERROR")
+                    .font(PicodFont.monoBold(9))
+                    .foregroundStyle(report.didPassCoreRules ? Color.picod_paper : Color.picod_paper)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(report.didPassCoreRules ? Color.picod_ink : Color(hex: "9A4B3A"))
+            }
+
+            LazyVGrid(columns: metricColumns, spacing: 6) {
+                WorldValidationMetric(title: "ERRORS", value: "\(report.errorCount)")
+                WorldValidationMetric(title: "WARNINGS", value: "\(report.warningCount)")
+                WorldValidationMetric(title: "EDGE TREES", value: "\(report.perimeterTreeCount)")
+                WorldValidationMetric(title: "REACHABLE", value: "\(report.reachableTileCount)")
+                WorldValidationMetric(title: "ROUTE", value: "\(report.primaryRouteTileCount)")
+                WorldValidationMetric(title: "DISCONNECTED", value: "\(report.disconnectedStructureCount)")
+                WorldValidationMetric(title: "PICO RISK", value: "\(report.picoOcclusionRiskCount)")
+            }
+
+            VStack(alignment: .leading, spacing: 6) {
+                ForEach(WorldMapValidationCategory.allCases, id: \.self) { category in
+                    WorldValidationCategoryRow(
+                        title: category.rawValue.uppercased(),
+                        summary: report.categorySummaryLine(for: category),
+                        hasIssues: !report.issues(in: category).isEmpty
+                    )
+                }
+            }
+
+            if report.issues.isEmpty {
+                Text("No placement issues found.")
+                    .font(PicodFont.mono(9))
+                    .foregroundStyle(Color.picod_ink2)
+            } else {
+                VStack(alignment: .leading, spacing: 10) {
+                    ForEach(WorldMapValidationCategory.allCases, id: \.self) { category in
+                        let issues = report.issues(in: category)
+                        if !issues.isEmpty {
+                            WorldValidationIssueSection(category: category, issues: issues)
+                        }
+                    }
+                }
+            }
+
+            if !report.issueCountsByCode.isEmpty {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("TOP CODES")
+                        .font(PicodFont.monoBold(9))
+                        .foregroundStyle(Color.picod_ink)
+                    ForEach(report.issueCountsByCode.prefix(5), id: \.code) { item in
+                        Text("\(item.code) x\(item.count)")
+                            .font(PicodFont.mono(8))
+                            .foregroundStyle(Color.picod_ink2)
+                    }
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(Color.picod_paper)
+        .overlay(Rectangle().stroke(Color.picod_ink.opacity(0.24), lineWidth: 1))
+    }
+}
+
+private struct WorldValidationMetric: View {
     let title: String
-    let kind: DebugGlyphKind
+    let value: String
+
+    var body: some View {
+        HStack {
+            Text(title)
+                .font(PicodFont.mono(8))
+                .foregroundStyle(Color.picod_ink2)
+            Spacer(minLength: 6)
+            Text(value)
+                .font(PicodFont.monoBold(10))
+                .foregroundStyle(Color.picod_ink)
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
+        .background(Color.picod_paper2.opacity(0.42))
+        .overlay(Rectangle().stroke(Color.picod_ink.opacity(0.14), lineWidth: 1))
+    }
+}
+
+private struct WorldValidationCategoryRow: View {
+    let title: String
+    let summary: String
+    let hasIssues: Bool
+
+    var body: some View {
+        HStack {
+            Text(title)
+                .font(PicodFont.monoBold(8))
+                .foregroundStyle(Color.picod_ink)
+            Spacer(minLength: 8)
+            Text(summary)
+                .font(PicodFont.mono(8))
+                .foregroundStyle(hasIssues ? Color(hex: "9A4B3A") : Color.picod_ink2)
+        }
+    }
+}
+
+private struct WorldValidationIssueSection: View {
+    let category: WorldMapValidationCategory
+    let issues: [WorldMapValidationIssue]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text(category.rawValue.uppercased())
+                .font(PicodFont.monoBold(9))
+                .foregroundStyle(Color.picod_ink)
+
+            ForEach(issues.prefix(10)) { issue in
+                WorldValidationIssueRow(issue: issue)
+            }
+
+            if issues.count > 10 {
+                Text("+ \(issues.count - 10) more")
+                    .font(PicodFont.mono(8))
+                    .foregroundStyle(Color.picod_ink2.opacity(0.72))
+            }
+        }
+    }
+}
+
+private struct WorldValidationIssueRow: View {
+    let issue: WorldMapValidationIssue
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Text(issue.severity.rawValue.uppercased())
+                    .font(PicodFont.monoBold(8))
+                    .foregroundStyle(issue.severity == .error ? Color(hex: "9A4B3A") : Color.picod_ink2)
+                Text(issue.code)
+                    .font(PicodFont.monoBold(8))
+                    .foregroundStyle(Color.picod_ink)
+                Spacer(minLength: 4)
+                Text(issue.coordLabel)
+                    .font(PicodFont.mono(8))
+                    .foregroundStyle(Color.picod_ink2)
+            }
+            Text(issue.message)
+                .font(PicodFont.mono(8))
+                .foregroundStyle(Color.picod_ink2)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(6)
+        .background(Color.picod_paper2.opacity(0.36))
+        .overlay(Rectangle().stroke(Color.picod_ink.opacity(0.12), lineWidth: 1))
+    }
+}
+
+private struct ObjectSpecRows: View {
+    let spec: WorldElementSpec
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text("foot \(spec.footprint.debugLabel) / vis \(spec.visualFootprint.debugLabel)")
+            Text("connect \(spec.connectionDebugLabel)")
+            Text(spec.blocksPico ? "blocks pico path" : "pico can pass")
+            Text(spec.requiresApproachTile ? "needs approach tile" : "no approach tile")
+        }
+        .font(PicodFont.mono(7))
+        .foregroundStyle(Color.picod_ink2.opacity(0.78))
+        .lineLimit(1)
+        .minimumScaleFactor(0.75)
+    }
+}
+
+private extension WorldFootprint {
+    var debugLabel: String {
+        "\(width)x\(height)"
+    }
+}
+
+private extension WorldElementSpec {
+    var connectionDebugLabel: String {
+        let labels = connectionRequirements
+            .filter { $0 != .none }
+            .map(\.rawValue)
+            .sorted()
+        return labels.isEmpty ? "free" : labels.joined(separator: "/")
+    }
+}
+
+private enum ObjectGalleryEntry: Identifiable {
+    case prop(PropKind)
+    case animal(AnimalKind)
+
+    var id: String {
+        switch self {
+        case .prop(let kind): return "prop-\(kind.rawValue)"
+        case .animal(let kind): return "animal-\(kind.rawValue)"
+        }
+    }
+
+    var title: String {
+        switch self {
+        case .prop(let kind): return kind.rawValue
+        case .animal(let kind): return kind.rawValue
+        }
+    }
+
+    var subtitle: String {
+        "\(spec.role.rawValue) • \(spec.groundingStyle.rawValue) • \(spec.occlusionClass.rawValue)"
+    }
+
+    var spec: WorldElementSpec {
+        let spec: WorldElementSpec
+        switch self {
+        case .prop(let kind): spec = kind.worldElementSpec
+        case .animal(let kind): spec = kind.worldElementSpec
+        }
+        return spec
+    }
+
+    var previewMap: TestMap {
+        let width = 7
+        let height = 7
+        var terrain = TerrainLayer(width: width, height: height, fill: .clearing)
+        for x in 0..<width {
+            terrain.set(.groveFloor, at: MapCoord(x: x, y: 0))
+            terrain.set(.wornPath, at: MapCoord(x: x, y: 5))
+        }
+        for x in 2...4 {
+            terrain.set(.shallowWater, at: MapCoord(x: x, y: 3))
+            terrain.set(.wetBank, at: MapCoord(x: x, y: 4))
+        }
+
+        let anchor = MapCoord(x: 3, y: 4)
+        switch self {
+        case .prop(let kind):
+            return TestMap(
+                name: "Gallery \(kind.rawValue)",
+                width: width,
+                height: height,
+                terrain: terrain,
+                props: [PropPlacement(kind: kind, coord: anchor)],
+                animals: [],
+                petSpawn: CreatureSpawn(id: "pico", coord: MapCoord(x: 1, y: 5))
+            )
+        case .animal(let kind):
+            let coord = kind.worldElementSpec.connectionRequirements.contains(.water)
+                ? MapCoord(x: 3, y: 3)
+                : anchor
+            return TestMap(
+                name: "Gallery \(kind.rawValue)",
+                width: width,
+                height: height,
+                terrain: terrain,
+                props: [],
+                animals: [AnimalPlacement(kind: kind, coord: coord)],
+                petSpawn: CreatureSpawn(id: "pico", coord: MapCoord(x: 1, y: 5))
+            )
+        }
+    }
+}
+
+private struct ObjectMapPreview: View {
+    let entry: ObjectGalleryEntry
+
+    var body: some View {
+        MapView(
+            tileSize: 7,
+            testMap: entry.previewMap,
+            showPetSpawn: false,
+            petCoord: nil,
+            animateAmbient: false
+        )
+        .frame(width: 86, height: 86)
+        .clipped()
+    }
 }
 
 private struct ObjectGlyphCanvas: View {
