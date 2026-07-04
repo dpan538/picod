@@ -22,7 +22,6 @@ struct DashboardView: View {
     let isControlMode: Bool
     let onOpenSettings: () -> Void
     let onPrimaryAction: () -> Void
-    let onChoosePhoto: () -> Void
     let onOpenStoryline: () -> Void
     let onEnterControlMode: () -> Void
     let onExitControlMode: () -> Void
@@ -72,14 +71,14 @@ struct DashboardView: View {
                     .lineLimit(1)
 
                 Text(dayMoodText)
-                    .font(PicodFont.display(25))
+                    .font(PicodFont.display(23))
                     .foregroundStyle(Color.picod_ink)
                     .lineLimit(1)
-                    .minimumScaleFactor(0.68)
+                    .minimumScaleFactor(0.62)
                     .allowsTightening(true)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.trailing, 44)
+            .padding(.trailing, 58)
             .layoutPriority(1)
 
             Button(action: onOpenSettings) {
@@ -241,42 +240,43 @@ struct DashboardView: View {
 
     private var actionPanel: some View {
         VStack(spacing: 8) {
-            Button(action: onPrimaryAction) {
-                Text(primaryActionTitle)
-                    .font(.system(size: 19, weight: .medium, design: .monospaced))
-                    .tracking(4)
+            if needsPhoto {
+                Button(action: onPrimaryAction) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "camera.fill")
+                            .font(.system(size: 16, weight: .semibold))
+                        Text(primaryActionTitle)
+                            .font(.system(size: 17, weight: .medium, design: .monospaced))
+                            .tracking(3)
+                    }
                     .foregroundStyle(Color.picod_paper)
                     .lineLimit(1)
-                    .minimumScaleFactor(0.62)
-                    .frame(width: mapSize * 0.42, height: 46)
+                    .minimumScaleFactor(0.72)
+                    .frame(width: min(178, mapSize * 0.46), height: 46)
                     .background(Color.picod_ink)
                     .clipShape(RoundedRectangle(cornerRadius: 4))
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(primaryActionTitle)
-
-            if needsPhoto {
-                Button(action: onChoosePhoto) {
-                    Text(secondaryActionTitle)
-                        .font(.system(size: 13, weight: .medium, design: .monospaced))
-                        .tracking(2.2)
-                        .foregroundStyle(Color.picod_ink)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.7)
-                        .frame(width: mapSize * 0.42, height: 30)
-                        .background(Color.picod_paper2)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 3)
-                                .stroke(Color.picod_ink.opacity(0.55), lineWidth: 1)
-                        )
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(secondaryActionTitle)
+                .accessibilityLabel(photoActionAccessibilityLabel)
+            } else {
+                Button(action: onPrimaryAction) {
+                    Text(primaryActionTitle)
+                        .font(.system(size: 19, weight: .medium, design: .monospaced))
+                        .tracking(4)
+                        .foregroundStyle(Color.picod_paper)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.62)
+                        .frame(width: mapSize * 0.42, height: 46)
+                        .background(Color.picod_ink)
+                        .clipShape(RoundedRectangle(cornerRadius: 4))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(primaryActionTitle)
             }
 
             Spacer(minLength: 0)
         }
-        .padding(.top, needsPhoto ? 24 : 32)
+        .padding(.top, 32)
         .background(Color.picod_paper)
     }
 
@@ -311,13 +311,15 @@ struct DashboardView: View {
 
     private var primaryActionTitle: String {
         if languageCode == "zh" {
-            return needsPhoto ? "今日照片" : "拍一拍"
+            return needsPhoto ? "照片" : "拍一拍"
         }
-        return needsPhoto ? "TODAY'S PHOTO" : "PAT PICO"
+        return needsPhoto ? "PHOTO" : "PAT PICO"
     }
 
-    private var secondaryActionTitle: String {
-        languageCode == "zh" ? "选照片" : "CHOOSE PHOTO"
+    private var photoActionAccessibilityLabel: String {
+        languageCode == "zh"
+            ? "照片。拍摄或选择今天的照片。"
+            : "Photo. Take or choose today's photo."
     }
 
     private var needsPhoto: Bool {

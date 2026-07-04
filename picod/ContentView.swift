@@ -403,6 +403,9 @@ struct ContentView: View {
             if DevTestMode.runWorldRichnessAudit {
                 WorldMapRichnessAuditor.printAudit()
             }
+            if DevTestMode.runLongitudinalLoopAudit {
+                PicodLongitudinalDebugScenarios.printAudit()
+            }
             #endif
 
             if DevTestMode.useFullTestMap && !DevTestMode.showObjectGalleryDebug && shouldRenderWorld {
@@ -468,11 +471,7 @@ struct ContentView: View {
         .onChange(of: selectedPhotoPickerItem) { _, newItem in
             handleSelectedPhotoPickerItem(newItem)
         }
-        .confirmationDialog(
-            photoSourceDialogTitle,
-            isPresented: $showingPhotoSourceDialog,
-            titleVisibility: .visible
-        ) {
+        .confirmationDialog(photoSourceDialogTitle, isPresented: $showingPhotoSourceDialog) {
             Button(photoSourceCameraTitle) {
                 requestCameraFlow()
             }
@@ -480,8 +479,6 @@ struct ContentView: View {
                 requestPhotoLibraryFlow()
             }
             Button(photoSourceCancelTitle, role: .cancel) {}
-        } message: {
-            Text(photoSourceDialogMessage)
         }
         .alert(
             isPresented: Binding(
@@ -514,6 +511,12 @@ struct ContentView: View {
         let rawH = geo.size.height
         let screenW = (rawW.isFinite && rawW > 0) ? rawW : 390
         let screenH = (rawH.isFinite && rawH > 0) ? rawH : 844
+
+        if DevTestMode.showObjectGalleryDebug {
+            ObjectGalleryDebugView()
+                .frame(width: screenW, height: screenH)
+                .ignoresSafeArea(.container, edges: .top)
+        } else {
         let mapSize = screenW
         let statusBarH: CGFloat = screenW * (101.0 / 390.0)
         let topBarH = statusBarH
@@ -601,6 +604,7 @@ struct ContentView: View {
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.16), value: showingSettings)
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.16), value: showingStoryline)
         .frame(width: screenW)
+        }
     }
 
     private func resolveMapMoodProgress(localHour: Int, minute: Int) -> Double {
@@ -723,7 +727,12 @@ struct ContentView: View {
                 MapView(
                     tileSize: tileSize,
                     testMap: devMap,
-                    showPetSpawn: DevTestMode.useFullTestMap,
+                    showPetSpawn: DevTestMode.useFullTestMap
+                        && PicodPrePhotoMapPolicy.canShowActivePico(
+                            appState: displayAppState,
+                            hasPhotoToday: displayHasPhotoToday,
+                            isPreviewWorkingState: shouldUsePreviewWorkingState
+                        ),
                     petCoord: DevTestMode.useFullTestMap ? worldSimulation.petCoord : nil,
                     petFormId: displayLatestFormId,
                     petAccentHex: displayLatestMapTintHex.isEmpty ? nil : displayLatestMapTintHex,
@@ -817,9 +826,6 @@ struct ContentView: View {
             onPrimaryAction: {
                 handlePrimaryAction(weatherCondition: weather.condition)
             },
-            onChoosePhoto: {
-                requestPhotoLibraryFlow()
-            },
             onOpenStoryline: {
                 if reduceMotion {
                     showingStoryline = true
@@ -867,6 +873,7 @@ struct ContentView: View {
                 petMood: worldSimulation.petState.mood,
                 fallbackToneState: fallbackToneState
             )
+            dayMoodText = topStatusLine(fallbackToneState: fallbackToneState, languageCode: languageCode)
 
             let resetToken = resetTokenFor4AM(now: now)
             if dailyPhotoResetToken.isEmpty {
@@ -1056,11 +1063,28 @@ struct ContentView: View {
         case .none:
             return nil
         case .denied:
-            return languageCode == "zh" ? "使用默认世界轮廓" : "using a gentle default world"
+            return languageCode == "zh" ? "本地环境很安静" : "local context is quiet"
         case .unresolved:
-            return languageCode == "zh" ? "正在寻找附近的环境" : "finding nearby world context"
+            return languageCode == "zh" ? "正在检查本地环境" : "checking local context"
         case .weatherUnavailable:
-            return languageCode == "zh" ? "天气暂不可用，使用气候回退" : "weather offline, climate fallback active"
+            return languageCode == "zh" ? "本地环境很安静" : "local context is quiet"
+        }
+    }
+
+    private func topStatusLine(fallbackToneState: FallbackToneState, languageCode: String) -> String {
+        if !displayHasPhotoToday && !shouldUsePreviewWorkingState {
+            return languageCode == "zh" ? "等今天的照片" : "waiting for today's photo"
+        }
+
+        switch fallbackToneState {
+        case .unresolved:
+            return languageCode == "zh" ? "正在检查本地环境" : "checking local context"
+        case .denied, .weatherUnavailable:
+            return languageCode == "zh" ? "本地环境很安静" : "local context is quiet"
+        case .none:
+            return displayHasPhotoToday
+                ? (languageCode == "zh" ? "今天已经被记住" : "today is remembered")
+                : (languageCode == "zh" ? "本地环境就绪" : "local context ready")
         }
     }
 

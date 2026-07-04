@@ -153,7 +153,7 @@ struct WorldStateProjector {
         used: Set<MapCoord>
     ) -> WorldProjectedElement? {
         let evidence = unique(signal.evidenceDailyRecordIDs + signal.mapTraceIDs)
-        switch signal.storylineID {
+        switch canonicalStorylineID(signal.storylineID) {
         case "night_lamplighter":
             guard let coord = pickCoord(intent: .pathEdge, kind: .lantern, baseMap: baseMap, used: used) else { return nil }
             return makePropElement(
@@ -198,6 +198,19 @@ struct WorldStateProjector {
             )
         default:
             return nil
+        }
+    }
+
+    private func canonicalStorylineID(_ storylineID: String) -> String {
+        switch storylineID {
+        case "nightLamplighter", "night_lamplighter":
+            return "night_lamplighter"
+        case "umbrellaWoman", "umbrella_woman":
+            return "umbrella_woman"
+        case "mirrorMiko", "mirror_miko":
+            return "mirror_miko"
+        default:
+            return storylineID
         }
     }
 

@@ -197,24 +197,29 @@ struct WorldSignalResolver {
 
     private func activeStoryCards(for record: DailyLifeRecord?, storyCards: [StoryCard]) -> [StoryCard] {
         storyCards.filter { card in
-            guard Self.p0StorylineIDs.contains(card.storylineID) else { return false }
+            let canonicalStorylineID = Self.canonicalStorylineID(card.storylineID)
+            guard Self.p0StorylineIDs.contains(canonicalStorylineID) else { return false }
             guard let record else { return card.displayState != .locked }
             return card.evidenceDailyRecordIDs.contains(record.id) ||
                 !Set(card.mapTraceIDs).isDisjoint(with: Set(record.storyTraceIDs)) ||
-                record.storyBeatIDs.contains { $0.contains(card.storylineID) }
+                record.storyBeatIDs.contains {
+                    Self.canonicalStorylineID($0.split(separator: ":").first.map(String.init) ?? "") == canonicalStorylineID
+                        || $0.contains(card.storylineID)
+                }
         }
     }
 
     private func storySignals(for cards: [StoryCard]) -> [StoryWorldSignal] {
         cards.map { card in
-            StoryWorldSignal(
-                storylineID: card.storylineID,
+            let canonicalStorylineID = Self.canonicalStorylineID(card.storylineID)
+            return StoryWorldSignal(
+                storylineID: canonicalStorylineID,
                 storyCardID: card.id,
                 displayState: card.displayState,
                 recurrenceCount: card.recurrenceCount,
                 evidenceDailyRecordIDs: Array(card.evidenceDailyRecordIDs.suffix(12)),
                 mapTraceIDs: Array(card.mapTraceIDs.suffix(12)),
-                suggestedWorldEcho: suggestedWorldEcho(for: card.storylineID),
+                suggestedWorldEcho: suggestedWorldEcho(for: canonicalStorylineID),
                 subtletyLevel: card.recurrenceCount >= 2 ? .clear : .subtle
             )
         }
@@ -443,6 +448,19 @@ struct WorldSignalResolver {
         "umbrella_woman",
         "mirror_miko"
     ]
+
+    nonisolated private static func canonicalStorylineID(_ storylineID: String) -> String {
+        switch storylineID {
+        case "nightLamplighter", "night_lamplighter":
+            return "night_lamplighter"
+        case "umbrellaWoman", "umbrella_woman":
+            return "umbrella_woman"
+        case "mirrorMiko", "mirror_miko":
+            return "mirror_miko"
+        default:
+            return storylineID
+        }
+    }
 }
 
 private extension WorldSignalBundle {

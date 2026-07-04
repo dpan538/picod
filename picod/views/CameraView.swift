@@ -16,54 +16,52 @@ struct CameraView: View {
 
     var body: some View {
         GeometryReader { geo in
-            let side = min(geo.size.width - 36, geo.size.height - 220)
+            let safe = geo.safeAreaInsets
+            let side = min(geo.size.width - 32, geo.size.height - safe.top - safe.bottom - 188)
             let frameSide = max(220, side)
 
             ZStack {
                 Color.picod_paper2.ignoresSafeArea()
 
-                VStack(spacing: 16) {
+                VStack(spacing: 18) {
                     Text(statusLine)
-                        .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                        .font(.system(size: 13, weight: .bold, design: .monospaced))
                         .textCase(.uppercase)
-                        .kerning(1.4)
-                        .foregroundStyle(Color.picod_paper)
+                        .kerning(1.1)
+                        .foregroundStyle(Color.picod_ink)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.78)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(Color.picod_paper.opacity(0.92))
+                        .overlay(Rectangle().stroke(Color.picod_ink.opacity(0.36), lineWidth: 1))
 
                     ZStack {
                         CameraPreviewView(session: camera.session)
                             .frame(width: frameSide, height: frameSide)
                             .clipped()
-                            .overlay(Color.picod_ink.opacity(0.14))
+                            .overlay(Color.picod_ink.opacity(0.08))
 
                         FilmCornerMarks()
                             .stroke(Color.picod_paper, lineWidth: 2)
                             .frame(width: frameSide, height: frameSide)
                     }
 
-                    FilmSprocketStrip()
-                        .frame(width: frameSide, height: 12)
+                    Spacer(minLength: 8)
 
                     Button {
                         triggerShutter()
                     } label: {
-                        ZStack {
-                            Circle()
-                                .stroke(Color.picod_paper, lineWidth: 2)
-                                .frame(width: 78, height: 78)
-                            Circle()
-                                .fill(Color.picod_paper.opacity(shutterFlash ? 0.95 : 0.75))
-                                .frame(width: 48, height: 48)
-                            Circle()
-                                .fill(Color.black.opacity(0.15))
-                                .frame(width: 16, height: 16)
-                        }
+                        Circle()
+                            .fill(Color.picod_paper.opacity(shutterFlash ? 0.92 : 1))
+                            .frame(width: 74, height: 74)
+                            .overlay(Circle().stroke(Color.picod_ink, lineWidth: 3))
                     }
                     .buttonStyle(.plain)
-
-                    FilmSprocketStrip()
-                        .frame(width: frameSide, height: 12)
+                    .accessibilityLabel("Take photo")
                 }
-                .padding(.top, 36)
+                .padding(.top, safe.top + 18)
+                .padding(.bottom, safe.bottom + 22)
 
                 if shutterFlash {
                     Color.white.opacity(0.20)
@@ -110,28 +108,5 @@ private struct FilmCornerMarks: Shape {
         p.addLine(to: CGPoint(x: rect.width, y: rect.height - m))
 
         return p
-    }
-}
-
-private struct FilmSprocketStrip: View {
-    var body: some View {
-        GeometryReader { geo in
-            let w = geo.size.width
-            let notch: CGFloat = 7
-            let spacing: CGFloat = 12
-            let count = max(1, Int(w / spacing))
-
-            ZStack {
-                Rectangle()
-                    .fill(Color.picod_ink.opacity(0.82))
-                HStack(spacing: spacing - notch) {
-                    ForEach(0..<count, id: \.self) { _ in
-                        RoundedRectangle(cornerRadius: 1)
-                            .fill(Color.picod_paper.opacity(0.9))
-                            .frame(width: notch, height: 4)
-                    }
-                }
-            }
-        }
     }
 }
