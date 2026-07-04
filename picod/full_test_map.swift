@@ -88,7 +88,7 @@ extension TestMapFactory {
             prop(.bigTree, point.0, point.1)
         }
 
-        for point in [(4, 17), (5, 18), (5, 20), (6, 21), (7, 22), (8, 20), (10, 20), (18, 6), (21, 7)] {
+        for point in [(4, 17), (5, 18), (5, 20), (6, 21), (7, 22), (8, 20), (9, 16), (18, 6), (21, 7)] {
             prop(.cherryTree, point.0, point.1)
         }
         prop(.weepingCherry, 6, 19)
@@ -97,9 +97,9 @@ extension TestMapFactory {
         prop(.torii, 19, 10)
         prop(.pagoda, 22, 9)
         prop(.shrineSmall, 22, 11)
-        prop(.japaneseHouse, 10, 22)
-        prop(.japaneseHouse, 17, 21)
-        prop(.japaneseSmallHouse, 12, 19)
+        prop(.japaneseHouse, 7, 21)
+        prop(.japaneseHouse, 17, 18)
+        prop(.japaneseSmallHouse, 10, 18)
         prop(.gate, 14, 24)
         prop(.dock, 20, 14)
         prop(.bench, 21, 15)
@@ -1026,7 +1026,7 @@ extension TestMapFactory {
                 (.bigTree, 2, 13), (.sacredEvergreen, 4, 14), (.tallPine, 7, 15), (.roundTree, 2, 21),
                 (.gardenPine, 5, 24), (.dwarfPine, 8, 25), (.roundTree, 21, 4), (.bigTree, 24, 9),
                 (.sacredEvergreen, 26, 14), (.gardenPine, 22, 16), (.tallTree, 24, 18), (.roundTree, 21, 23),
-                (.tallPine, 24, 25), (.gardenPine, 18, 25),
+                (.tallPine, 24, 25), (.gardenPine, 18, 27),
                 (.denseBush, 4, 6), (.denseBush, 23, 5), (.mushroomPatch, 3, 15), (.fallenLog, 22, 24),
                 (.denseBush, 6, 14), (.denseBush, 24, 13), (.mushroomPatch, 21, 24),
                 (.torii, 14, 9), (.shrineSmall, 14, 7), (.pagoda, 18, 7), (.stoneWell, 10, 10),
@@ -1093,14 +1093,14 @@ extension TestMapFactory {
             },
             props: [
                 (.roundTree, 3, 4), (.tallTree, 5, 5), (.bigTree, 8, 7), (.sacredEvergreen, 22, 17),
-                (.tallPine, 24, 19), (.bigTree, 22, 23), (.roundTree, 4, 24), (.gardenPine, 2, 18),
+                (.tallPine, 24, 19), (.bigTree, 22, 23), (.roundTree, 2, 26), (.gardenPine, 2, 18),
                 (.roundTree, 11, 3), (.tallTree, 14, 4), (.bigTree, 24, 4), (.roundTree, 25, 13),
-                (.tallPine, 3, 11), (.bigTree, 10, 24), (.roundTree, 15, 24), (.sacredEvergreen, 20, 24),
+                (.tallPine, 3, 11), (.bigTree, 15, 27), (.roundTree, 15, 24), (.sacredEvergreen, 20, 24),
                 (.bridgeShort, 8, 14), (.japaneseBridge, 19, 14), (.dock, 22, 12), (.dock, 18, 8),
                 (.stoneWell, 21, 7), (.reedCluster, 17, 8), (.reedCluster, 20, 9), (.reedCluster, 23, 10),
                 (.reedCluster, 4, 14), (.reedCluster, 11, 15), (.reedCluster, 6, 8), (.reedCluster, 14, 11),
                 (.lantern, 6, 18), (.lantern, 12, 18),
-                (.lantern, 20, 15), (.stoneLanternJp, 22, 8), (.weepingCherry, 5, 21), (.cherryTree, 8, 22),
+                (.lantern, 20, 15), (.stoneLanternJp, 22, 8), (.weepingCherry, 3, 20), (.cherryTree, 2, 24),
                 (.denseBush, 6, 17), (.flowerBed, 7, 21), (.flowerBed, 10, 20), (.mushroomPatch, 4, 23),
                 (.flowerBed, 13, 22), (.flowerBed, 15, 23), (.denseBush, 12, 5), (.denseBush, 24, 15),
                 (.fallenLog, 5, 16), (.fallenLog, 11, 6), (.signpost, 7, 24), (.smallRock, 14, 13),
@@ -1149,13 +1149,13 @@ extension TestMapFactory {
                 fillRect(.stoneGround, x: 10...14, y: 5...8, in: &terrain)
             },
             props: [
-                (.japaneseHouse, 6, 8), (.japaneseHouse, 18, 8), (.japaneseSmallHouse, 7, 21),
+                (.japaneseHouse, 6, 8), (.japaneseHouse, 18, 8), (.japaneseSmallHouse, 4, 18),
                 (.japaneseSmallHouse, 17, 22), (.tinyShed, 22, 17), (.kiosk, 12, 13),
                 (.kiosk, 15, 13), (.kiosk, 19, 14), (.mailbox, 9, 16), (.crate, 10, 12),
                 (.crate, 13, 12), (.crate, 19, 12), (.crate, 21, 15), (.bench, 8, 15),
                 (.bench, 20, 17), (.signpost, 17, 20), (.lantern, 10, 10), (.lantern, 18, 10),
-                (.stoneLanternJp, 22, 8), (.roundTree, 3, 5), (.cherryTree, 4, 21),
-                (.weepingCherry, 6, 23), (.roundTree, 24, 6), (.tallTree, 24, 12),
+                (.stoneLanternJp, 22, 8), (.roundTree, 3, 5), (.cherryTree, 1, 24),
+                (.weepingCherry, 1, 26), (.roundTree, 24, 6), (.tallTree, 24, 12),
                 (.bigTree, 23, 22), (.tallPine, 25, 18), (.denseBush, 21, 9),
                 (.roundTree, 4, 11), (.tallTree, 3, 17), (.bigTree, 9, 4), (.cherryTree, 12, 5),
                 (.roundTree, 14, 4), (.tallTree, 25, 9), (.bigTree, 24, 16), (.gardenPine, 21, 23),
@@ -1165,7 +1165,7 @@ extension TestMapFactory {
                 (.flowerBed, 5, 23), (.flowerBed, 8, 21), (.flowerBed, 20, 19),
                 (.flowerBed, 16, 6), (.flowerBed, 23, 14), (.mushroomPatch, 22, 21),
                 (.smallRock, 11, 18), (.smallRock, 14, 10), (.largeRock, 23, 10), (.fallenLog, 4, 15),
-                (.japaneseHouse, 9, 7), (.japaneseSmallHouse, 22, 12), (.tinyShed, 12, 17),
+                (.japaneseHouse, 9, 7), (.japaneseSmallHouse, 22, 12), (.tinyShed, 4, 16),
                 (.kiosk, 8, 18), (.kiosk, 13, 18), (.kiosk, 18, 19), (.crate, 7, 20),
                 (.crate, 10, 20), (.crate, 15, 21), (.mailbox, 21, 11), (.billboard, 22, 18),
                 (.lantern, 9, 10), (.lantern, 17, 13), (.lantern, 22, 20),
@@ -1217,8 +1217,8 @@ extension TestMapFactory {
             props: [
                 (.bigTree, 2, 4), (.tallTree, 5, 5), (.bigTree, 7, 9), (.sacredEvergreen, 4, 22),
                 (.tallPine, 20, 4), (.bigTree, 23, 7), (.roundTree, 24, 14), (.bigTree, 22, 23),
-                (.tallTree, 10, 6), (.roundTree, 12, 24), (.sacredEvergreen, 25, 19),
-                (.roundTree, 3, 12), (.tallPine, 6, 16), (.bigTree, 8, 20), (.roundTree, 11, 3),
+                (.tallTree, 10, 6), (.roundTree, 17, 27), (.sacredEvergreen, 25, 19),
+                (.roundTree, 3, 12), (.tallPine, 3, 16), (.bigTree, 3, 20), (.roundTree, 11, 3),
                 (.tallTree, 14, 4), (.bigTree, 24, 10), (.roundTree, 25, 16), (.gardenPine, 19, 23),
                 (.lantern, 9, 22), (.lantern, 12, 20), (.lantern, 16, 17), (.lantern, 18, 13),
                 (.lantern, 16, 9), (.stoneLanternJp, 8, 16), (.stoneLanternJp, 19, 8),
@@ -1229,7 +1229,7 @@ extension TestMapFactory {
                 (.flowerBed, 21, 21), (.flowerBed, 16, 22), (.signpost, 7, 24),
                 (.smallRock, 12, 16), (.smallRock, 7, 10), (.largeRock, 11, 10),
                 (.largeRock, 22, 5), (.fallenLog, 5, 12),
-                (.japaneseSmallHouse, 6, 21), (.tinyShed, 21, 18), (.kiosk, 12, 19),
+                (.japaneseSmallHouse, 3, 23), (.tinyShed, 21, 18), (.kiosk, 12, 19),
                 (.lantern, 7, 21), (.lantern, 20, 18), (.lantern, 23, 15), (.lantern, 5, 9),
                 (.stoneLanternJp, 6, 7), (.stoneLanternJp, 22, 20), (.flowerBed, 5, 7),
                 (.flowerBed, 20, 20), (.mushroomPatch, 7, 22), (.mushroomPatch, 23, 17),

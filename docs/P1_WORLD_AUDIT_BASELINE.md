@@ -247,6 +247,7 @@ Observed result:
 - P1C current: `static maps 5 / projection scenarios 10 / errors 0 / warnings 320 / actions 320 / high 55`
 - P1D current: `static maps 5 / projection scenarios 10 / errors 0 / warnings 320 / actions 320 / high 55`
 - P1F current: `static maps 5 / projection scenarios 10 / errors 0 / warnings 320 / actions 320 / high 55`
+- P1I current: `static maps 5 / projection scenarios 10 / errors 0 / warnings 321 / actions 321 / high 0`
 
 ## P1F Evidence Link Audit
 
@@ -371,3 +372,66 @@ Safe to defer:
 - Non-critical decorative grounding issues.
 - Perimeter density changes that could crowd Pico routes.
 - Copy polish suggestions that are not raw-term leaks.
+
+## P1I Targeted Warning Remediation
+
+P1I targeted the high-priority route and spawn visual readability warnings from
+P1H. It changed only existing map prop coordinates in `full_test_map.swift`.
+No validator thresholds were lowered, no warnings were hidden, and projection
+rendering remains gated.
+
+Observed combined console result after P1I:
+
+- static maps: 5
+- projection scenarios: 10
+- total errors: 0
+- total warnings: 321
+- total actions: 321
+- high actions: 0
+
+Breakdown:
+
+- static map errors/warnings: 0 / 95
+- projection scenario errors/warnings: 0 / 226
+
+Resolved high-priority clusters:
+
+- `forestShrine`: spawn occlusion around `x10 y22`.
+- `forestShrine`: route occlusion around `x17 y21` and `x18 y25`.
+- `wetlandLantern`: lower-left spawn/route occlusion around `x4 y24`,
+  `x5 y21`, `x8 y22`, and `x10 y24`.
+- `nightGrove`: lamplighter-route occlusion around `x12 y24`, `x8 y20`, and
+  `x6 y21`.
+- `villageMarket`: route crowding around `x7 y21`, `x6 y23`, and `x12 y17`.
+- `aprilDense`: route/spawn crowding around `x10 y22`, `x12 y19`, and
+  `x10 y20`.
+
+Evidence integrity remained clean:
+
+- evidence-link unresolved links: 0
+- duplicate anchors: 0
+- locked leaks: 0
+- missing evidence: 0
+- evidence-copy failures: 0
+
+Remaining warnings after P1I are not route/spawn blockers. They are medium/low
+backlog:
+
+- structure approach tiles and disconnected structures
+- decorative terrain mismatch
+- perimeter forest sparse warnings outside protected route bands
+- wetland projected animal/visitor habitat tuning
+- projection scenario polish that should be reviewed with screenshots
+
+Top P1J candidates after P1I:
+
+1. Add approach tiles for shrine, market, wetland, and grove structures where
+   they improve map belonging.
+2. Tune wetland animal and visitor habitat placement without weakening rain
+   mood.
+3. Compare projection scenario warning increase against screenshots before
+   making more map changes.
+4. Densify sparse perimeter forest only outside Pico route protection bands.
+5. Polish decorative terrain mismatch for story-relevant traces first.
+6. Keep production projection gated until medium connection and habitat warnings
+   are reviewed visually.
